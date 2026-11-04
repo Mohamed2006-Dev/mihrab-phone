@@ -1,0 +1,36 @@
+{
+  "name": "mihrab-phone",
+  "version": "1.0.0",
+  "description": "تطبيق محراب للهواتف الذكية لمواقيت الصلاة والأذكار وأوراد القرآن والدروس",
+  "main": "src/platform/mobile-api.js",
+  "scripts": {
+    "prepare:web": "node scripts/prepare-web-assets.mjs",
+    "cap:sync": "npm run prepare:web && npx cap sync"
+  },
+  "keywords": [
+    "prayer-times",
+    "islamic",
+    "mobile",
+    "capacitor",
+    "quran",
+    "hadith"
+  ],
+  "author": "Mihrab Mobile",
+  "license": "SEE LICENSE IN LICENSE",
+  "dependencies": {
+    "@capacitor/android": "^8.6.0",
+    "@capacitor/app": "^8.1.2",
+    "@capacitor/cli": "^8.6.0",
+    "@capacitor/core": "^8.6.0",
+    "@capacitor/geolocation": "^8.2.4",
+    "@capacitor/haptics": "^8.0.2",
+    "@capacitor/local-notifications": "^8.3.1",
+    "@capacitor/preferences": "^8.0.1",
+    "@capacitor/share": "^8.0.3",
+    "@capacitor/status-bar": "^8.0.4",
+    "adhan": "^4.4.6"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2"
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "appId": "com.mihrab.mobile",
+  "appName": "محراب",
+  "webDir": "web",
+  "plugins": {
+    "LocalNotifications": {
+      "smallIcon": "ic_stat_mihrab",
+      "iconColor": "#215b53",
+      "sound": "adhan.wav"
+    },
+    "SplashScreen": {
+      "launchShowDuration": 1500,
+      "backgroundColor": "#071310",
+      "showSpinner": false
+    },
+    "CapacitorHttp": {
+      "enabled": true
+    }
+  }
+}

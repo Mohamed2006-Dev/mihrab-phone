@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">محراب</string>
+    <string name="title_activity_main">محراب</string>
+    <string name="package_name">com.mihrab.mobile</string>
+    <string name="custom_url_scheme">com.mihrab.mobile</string>
+<string name="prayer_widget_description">محراب: الصلاة القادمة وموعدها والوقت المتبقي من المواقيت المحفوظة.</string></resources>

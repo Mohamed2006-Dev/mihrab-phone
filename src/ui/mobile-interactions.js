@@ -39,3 +39,51 @@ function initializeMobileInteractions(){
  document.addEventListener('touchmove',event=>{if(!gesture||event.touches.length!==2)return;event.preventDefault();setMobileTextZoom(gesture.element,gesture.scale*distance(event.touches)/Math.max(1,gesture.start));},{passive:false});
  document.addEventListener('touchend',event=>{if(event.touches.length<2)gesture=null;},{passive:true});
 }
+
+// Reconcile permission controls after the renderer has refreshed the saved settings.
+function reflectSystemPermissions(){
+ const native=window.MihrabNative;if(!native)return;
+ const config=typeof state!=='undefined'?state.config:null;
+ const granted=config?.systemPermissions?.notifications===true;
+ const panel=document.getElementById('notification-settings');if(!panel)return;
+ let button=document.getElementById('request-native-notifications');
+ if(!button){button=document.createElement('button');button.id='request-native-notifications';button.type='button';button.className='btn btn-secondary';button.textContent='السماح بإشعارات التطبيق';panel.querySelector('header').after(button);button.addEventListener('click',async()=>{button.disabled=true;try{const ok=await window.mihrabApi.notifications.requestPermission();await window.mihrabApi.syncSystemPermissions();if(!ok)await native.DeviceInfo.openNotificationSettings();}finally{button.disabled=false;}});}
+ button.hidden=granted;
+ if(typeof renderQuranNotificationShortcuts==='function')renderQuranNotificationShortcuts();
+ for(const input of panel.querySelectorAll('input,select')){
+  if(!granted){if(input.dataset.permissionDisabled!=='true')input.dataset.wasDisabled=String(input.disabled);input.dataset.permissionDisabled='true';input.disabled=true;}
+  else if(input.dataset.permissionDisabled==='true'){input.disabled=input.dataset.wasDisabled==='true';delete input.dataset.permissionDisabled;delete input.dataset.wasDisabled;}
+ }
+}
+if(window.mihrabApi?.onConfigUpdated)window.mihrabApi.onConfigUpdated(()=>queueMicrotask(reflectSystemPermissions));
+window.MihrabBoot?.whenReady?.then(reflectSystemPermissions);
+window.addEventListener('online',()=>{
+ const network=/تعذر الاتصال|الشبكة غير متاحة|غير متصل|انقطاع|عدم (?:توفر|وجود) (?:الشبكة|الإنترنت)|لا يوجد اتصال|دون اتصال|offline|failed to fetch|network|ERR_INTERNET_DISCONNECTED/i;
+ for(const node of document.querySelectorAll('[role="status"],.settings-status'))if(network.test(node.textContent)){node.textContent='';}
+ for(const dialog of document.querySelectorAll('dialog[open]'))if(network.test(dialog.textContent)&&/تعذر|فشل|خطأ|error/i.test(dialog.textContent))dialog.close();
+});
+
+function fitPrayerCards(){
+ const name=document.querySelector('.prayer-item-card .prayer-name');if(!name)return;
+ // Computed size already includes WebView text scaling; never apply it twice.
+ const font=parseFloat(getComputedStyle(name).fontSize)||17;
+ document.documentElement.style.setProperty('--prayer-card-min',Math.max(100,Math.ceil(100*font/17))+'px');
+}
+window.addEventListener('resize',fitPrayerCards);window.MihrabBoot.whenReady.then(fitPrayerCards);
+
+window.addEventListener('online',async()=>{
+ const modal=document.getElementById('modal-operation-result');
+ if(modal?.dataset.networkError==='true'){modal.classList.remove('open');delete modal.dataset.networkError;}
+ const status=document.getElementById('yt-feed-status');
+ if(status&&/تعذر|فشل|offline|network/i.test(status.textContent)){
+   status.textContent='';status.hidden=true;
+   if(state.config?.network?.enabled!==false&&state.config?.network?.categories?.youtube!==false){
+    try{renderYoutubeState(await window.mihrabApi.refreshYoutubeFeeds('all'));}catch(error){if(typeof showYoutubeError==='function')showYoutubeError(error);else{status.hidden=false;status.textContent='تعذر تحديث الخلاصات: '+error.message;}}
+   }
+ }
+});
+
+window.mihrabApi.events.on('app:permission-sync-completed',()=>queueMicrotask(()=>{
+ settingsDraftBaselines.set('notifications',settingsGroupSnapshot('notifications'));
+ updateDirtyBadges();
+}));

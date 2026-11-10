@@ -12,11 +12,11 @@ const detail = (value) =>
     ? String(value)
     : 'غير مذكور في المصدر';
 
-function buildHadithImageHtml(hadith, baseDir = '') {
+function buildHadithImageHtml(hadith, baseDir = '', suppliedFont = '', suppliedBold = '') {
   if (!hadith?.text?.trim()) throw Error('لا يوجد متن حديث لإنشاء الصورة.');
   if (hadith.text.length > 18000) throw Error('نص الحديث أطول من سعة بطاقة الصورة.');
 
-  let fontData = '';
+  let fontData = suppliedFont;
   try {
     if (fs && path && baseDir) {
       const fontFile = path.join(baseDir, 'src/ui/assets/fonts', 'amiri-arabic-400-normal.woff2');
@@ -37,6 +37,7 @@ function buildHadithImageHtml(hadith, baseDir = '') {
 
   return `<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><style>
   ${fontFace}
+  ${suppliedBold ? `@font-face{font-family:Amiri;src:url(data:font/woff2;base64,${suppliedBold}) format('woff2');font-weight:700}` : ''}
   *{box-sizing:border-box}html,body{margin:0;width:1200px;background:#103a30;font-family:Amiri,serif}body{overflow:hidden}
   .canvas{width:1200px;padding:58px;background:radial-gradient(ellipse at top,#245949,#103a30 65%);position:relative}
   .outer-line{position:absolute;inset:24px;border:1px solid #bba36c88;border-radius:42px;pointer-events:none}

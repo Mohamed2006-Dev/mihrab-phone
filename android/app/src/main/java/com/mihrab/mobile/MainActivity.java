@@ -12,7 +12,18 @@ public class MainActivity extends BridgeActivity {
  @Override public void onCreate(Bundle savedInstanceState){
   SplashScreen splash=SplashScreen.installSplashScreen(this);
   registerPlugin(MihrabDevicePlugin.class);
+  registerPlugin(MihrabLocalSyncPlugin.class);
   super.onCreate(savedInstanceState);
+  if (android.os.Build.VERSION.SDK_INT >= 35) {
+   try {
+    android.appwidget.AppWidgetManager.getInstance(this).setWidgetPreview(
+        new android.content.ComponentName(this, MihrabPrayerWidget.class),
+        android.appwidget.AppWidgetProviderInfo.WIDGET_CATEGORY_HOME_SCREEN,
+        new android.widget.RemoteViews(getPackageName(), R.layout.prayer_widget_preview_image));
+   } catch (RuntimeException error) {
+    android.util.Log.w("MihrabWidget", "Could not register generated preview", error);
+   }
+  }
   splash.setKeepOnScreenCondition(()->!bootMarkupReady);
   splash.setOnExitAnimationListener(provider->provider.getView().animate().alpha(0f).setDuration(90).withEndAction(provider::remove).start());
   // Native fallback only: the HTML boot screen still hides uninitialized content.

@@ -1,12 +1,13 @@
 function renderQuranNotificationShortcuts() {
   const mode =
-    state.quranState?.settings?.notificationMode ||
     state.config?.quranWird?.notificationMode ||
+    state.quranState?.settings?.notificationMode ||
     'both';
   for (const kind of ['reading', 'hifz']) {
     const button = document.getElementById('btn-' + kind + '-notification');
     if (!button) continue;
-    const enabled = mode === 'both' || mode === kind + '_only';
+    const enabled = state.config?.systemPermissions?.notifications!==false&&(mode === 'both' || mode === kind + '_only');
+    button.disabled=state.config?.systemPermissions?.notifications===false;
     button.setAttribute('aria-pressed', String(enabled));
     button.setAttribute(
       'aria-label',
@@ -151,3 +152,7 @@ function initializeProjectInfo() {
     }
   });
 }
+
+document.querySelectorAll("[data-project-repository]").forEach(link=>link.addEventListener("click",event=>{event.preventDefault();window.mihrabApi.openExternalUrl(link.href).catch(error=>showOperationResultModal({success:false,title:"تعذر فتح المستودع",summary:error.message}));}));
+
+document.querySelectorAll("[data-privacy-policy]").forEach(link=>link.addEventListener("click",event=>{event.preventDefault();window.mihrabApi.openExternalUrl(link.href).catch(error=>showOperationResultModal({success:false,title:"تعذر فتح سياسة الخصوصية",summary:error.message}));}));

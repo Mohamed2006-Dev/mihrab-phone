@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:id="@+id/widget_root" android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:layoutDirection="rtl" android:gravity="center" android:padding="10dp" android:background="@drawable/prayer_widget_background">
+ <TextView android:id="@+id/widget_city" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="محراب · معاينة" android:gravity="center" android:textColor="#A3CEB5" android:textSize="12sp" android:maxLines="1" android:ellipsize="end"/>
+ <TextView android:id="@+id/widget_prayer" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="صلاة الظهر" android:gravity="center" android:textColor="#F3F0D9" android:textStyle="bold" android:textSize="20sp" android:maxLines="1" android:ellipsize="end"/>
+ <TextView android:id="@+id/widget_time" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="12:12" android:textColor="#D1AD4E" android:textSize="24sp" android:textStyle="bold" android:textDirection="ltr"/>
+ <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center" android:paddingTop="3dp">
+  <TextView android:id="@+id/widget_remaining" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="الوقت المتبقي  " android:textColor="#C0CABE" android:textSize="11sp"/>
+  <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="01:25" android:textColor="#E6C978" android:textSize="15sp" android:textDirection="ltr"/>
+ </LinearLayout>
+</LinearLayout>

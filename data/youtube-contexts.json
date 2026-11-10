@@ -943,38 +943,7 @@
       "partialKeywords": []
     }
   ],
-  "defaultChannels": [
-    {
-      "id": "ch_othman",
-      "channelId": "UCWjCSGhmSGu0VLf2mPFS0Kg",
-      "name": "الشيخ د. عثمان الخميس",
-      "category": "الفقه والعقيدة والسيرة"
-    },
-    {
-      "id": "ch_abad",
-      "channelId": "UC6UwNU4kNwbozS9JzDWZtpw",
-      "name": "الشيخ عبد المحسن العباد (مشروع كبار العلماء)",
-      "category": "الحديث وعلوم الشريعة"
-    },
-    {
-      "id": "ch_alsayed",
-      "channelId": "UC12IpvuOpdTF6rr_EcjZc3A",
-      "name": "أحمد السيد - البناء المنهجي وتزكية النفس",
-      "category": "تزكية النفس والمنهجية"
-    },
-    {
-      "id": "ch_othaimeen",
-      "channelId": "UCmEiq5WmEUMKaHMfssimJ_w",
-      "name": "الشيخ محمد بن صالح العثيمين",
-      "category": "الفقه والتفسير"
-    },
-    {
-      "id": "ch_zad",
-      "channelId": "UCOll3M-P7oKs5cSrQ9ytt6g",
-      "name": "قناة زاد العلمية",
-      "category": "تدبر القرآن والعلم الشرعي"
-    }
-  ],
+  "defaultChannels": [],
   "curatedFallbackVideos": [],
   "schemaVersion": 2,
   "scoring": {

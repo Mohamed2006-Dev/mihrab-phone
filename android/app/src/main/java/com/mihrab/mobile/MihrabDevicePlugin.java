@@ -13,8 +13,61 @@ import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
 
-@CapacitorPlugin(name="MihrabDevice")
+@CapacitorPlugin(name="MihrabDevice",permissions={@com.getcapacitor.annotation.Permission(alias="location",strings={android.Manifest.permission.ACCESS_COARSE_LOCATION}),@com.getcapacitor.annotation.Permission(alias="gallery",strings={android.Manifest.permission.WRITE_EXTERNAL_STORAGE})})
 public class MihrabDevicePlugin extends Plugin {
+    @PluginMethod public void requestLocationPermission(PluginCall call){requestPermissionForAlias("location",call,"locationPermissionResult");}
+    @com.getcapacitor.annotation.PermissionCallback private void locationPermissionResult(PluginCall call){getPermissionStates(call);}
+    @PluginMethod public void getPermissionStates(PluginCall call){
+        boolean fine=androidx.core.content.ContextCompat.checkSelfPermission(getContext(),android.Manifest.permission.ACCESS_FINE_LOCATION)==android.content.pm.PackageManager.PERMISSION_GRANTED;
+        boolean coarse=androidx.core.content.ContextCompat.checkSelfPermission(getContext(),android.Manifest.permission.ACCESS_COARSE_LOCATION)==android.content.pm.PackageManager.PERMISSION_GRANTED;
+        JSObject out=new JSObject();out.put("location",fine||coarse);out.put("notifications",androidx.core.app.NotificationManagerCompat.from(getContext()).areNotificationsEnabled());call.resolve(out);
+    }
+    @PluginMethod public void openNotificationSettings(PluginCall call){
+        android.content.Intent intent;if(android.os.Build.VERSION.SDK_INT>=26){intent=new android.content.Intent(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS);intent.putExtra(android.provider.Settings.EXTRA_APP_PACKAGE,getContext().getPackageName());}else{intent=new android.content.Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,android.net.Uri.parse("package:"+getContext().getPackageName()));}getActivity().startActivity(intent);call.resolve();
+    }
+    @Override public void load(){
+        if(android.os.Build.VERSION.SDK_INT>=24){android.net.ConnectivityManager manager=(android.net.ConnectivityManager)getContext().getSystemService(Context.CONNECTIVITY_SERVICE);networkCallback=new android.net.ConnectivityManager.NetworkCallback(){@Override public void onCapabilitiesChanged(android.net.Network n,android.net.NetworkCapabilities capabilities){publishNetwork(capabilities.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_VALIDATED));}@Override public void onLost(android.net.Network n){publishNetwork(false);}};manager.registerDefaultNetworkCallback(networkCallback);}
+    }
+    private android.net.ConnectivityManager.NetworkCallback networkCallback;
+    private void publishNetwork(boolean connected){JSObject out=new JSObject();out.put("connected",connected);notifyListeners("networkStatus",out);}
+    @Override protected void handleOnDestroy(){if(networkCallback!=null){android.net.ConnectivityManager manager=(android.net.ConnectivityManager)getContext().getSystemService(Context.CONNECTIVITY_SERVICE);manager.unregisterNetworkCallback(networkCallback);}super.handleOnDestroy();}
+    @PluginMethod public void renderHadithCard(PluginCall call){
+      getActivity().runOnUiThread(()->{
+        android.webkit.WebView view=new android.webkit.WebView(getContext());float density=getContext().getResources().getDisplayMetrics().density;int width=1200;
+        view.getSettings().setJavaScriptEnabled(true);view.getSettings().setTextZoom(100);view.setInitialScale(100);view.setLayerType(android.view.View.LAYER_TYPE_SOFTWARE,null);
+        view.measure(android.view.View.MeasureSpec.makeMeasureSpec(width,android.view.View.MeasureSpec.EXACTLY),android.view.View.MeasureSpec.makeMeasureSpec(2000,android.view.View.MeasureSpec.EXACTLY));view.layout(0,0,width,2000);
+        view.setWebViewClient(new android.webkit.WebViewClient(){@Override public void onPageFinished(android.webkit.WebView v,String url){
+          v.evaluateJavascript("document.fonts.ready.then(()=>document.documentElement.dataset.cardReady='1')",null);
+          android.os.Handler handler=new android.os.Handler(android.os.Looper.getMainLooper());final int[] attempts={0};Runnable poll=new Runnable(){public void run(){v.evaluateJavascript("JSON.stringify({ready:document.documentElement.dataset.cardReady==='1',height:document.querySelector('.canvas').getBoundingClientRect().height})",raw->{try{
+            String decoded=new org.json.JSONArray("["+raw+"]").getString(0);org.json.JSONObject size=new org.json.JSONObject(decoded);
+            if(!size.getBoolean("ready")){if(++attempts[0]>100)throw new Exception("Font loading timed out");handler.postDelayed(this,50);return;}
+            int height=(int)Math.ceil(size.getDouble("height"));if(height<1||height>16000)throw new Exception("Image size exceeds supported limit");v.layout(0,0,width,height);
+            handler.postDelayed(()->{try{android.graphics.Bitmap bitmap=android.graphics.Bitmap.createBitmap(1200,height,android.graphics.Bitmap.Config.ARGB_8888);android.graphics.Canvas canvas=new android.graphics.Canvas(bitmap);v.draw(canvas);java.io.ByteArrayOutputStream stream=new java.io.ByteArrayOutputStream();bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG,100,stream);bitmap.recycle();JSObject out=new JSObject();out.put("data",android.util.Base64.encodeToString(stream.toByteArray(),android.util.Base64.NO_WRAP));call.resolve(out);}catch(Exception e){call.reject("تعذر رسم بطاقة الحديث",e);}finally{v.destroy();}},150);
+          }catch(Exception e){v.destroy();call.reject("تعذر تجهيز بطاقة الحديث",e);}});}};handler.post(poll);
+        }});view.loadDataWithBaseURL("https://localhost/",call.getString("html",""),"text/html","UTF-8",null);
+      });
+    }
+    @PluginMethod public void saveImage(PluginCall call){
+      try{
+        byte[] bytes=android.util.Base64.decode(call.getString("data",""),android.util.Base64.DEFAULT);
+        if(android.os.Build.VERSION.SDK_INT>=29){
+          android.content.ContentResolver resolver=getContext().getContentResolver();android.content.ContentValues values=new android.content.ContentValues();values.put(android.provider.MediaStore.Images.Media.DISPLAY_NAME,"mihrab-hadith-"+System.currentTimeMillis()+".png");values.put(android.provider.MediaStore.Images.Media.MIME_TYPE,"image/png");values.put(android.provider.MediaStore.Images.Media.RELATIVE_PATH,"Pictures/الأحاديث-محراب");values.put(android.provider.MediaStore.Images.Media.IS_PENDING,1);
+          android.net.Uri uri=resolver.insert(android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI,values);if(uri==null)throw new java.io.IOException("MediaStore insert failed");
+          try{try(java.io.OutputStream stream=resolver.openOutputStream(uri)){if(stream==null)throw new java.io.IOException("No output stream");stream.write(bytes);}values.clear();values.put(android.provider.MediaStore.Images.Media.IS_PENDING,0);resolver.update(uri,values,null,null);}catch(Exception e){resolver.delete(uri,null,null);throw e;}
+        }else{
+          if(androidx.core.content.ContextCompat.checkSelfPermission(getContext(),android.Manifest.permission.WRITE_EXTERNAL_STORAGE)!=android.content.pm.PackageManager.PERMISSION_GRANTED){requestPermissionForAlias("gallery",call,"galleryPermission");return;}
+          java.io.File dir=new java.io.File(android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_PICTURES),"الأحاديث-محراب");if(!dir.exists()&&!dir.mkdirs())throw new java.io.IOException("Cannot create gallery folder");java.io.File file=new java.io.File(dir,"mihrab-hadith-"+System.currentTimeMillis()+".png");try(java.io.FileOutputStream stream=new java.io.FileOutputStream(file)){stream.write(bytes);}android.media.MediaScannerConnection.scanFile(getContext(),new String[]{file.getAbsolutePath()},new String[]{"image/png"},null);
+        }
+        JSObject out=new JSObject();out.put("saved",true);call.resolve(out);
+      }catch(Exception e){call.reject("تعذر حفظ الصورة في المعرض",e);}
+    }
+    @com.getcapacitor.annotation.PermissionCallback private void galleryPermission(PluginCall call){if(getPermissionState("gallery")==com.getcapacitor.PermissionState.GRANTED)saveImage(call);else call.reject("لم يُمنح إذن حفظ الصورة في المعرض.");}
+    @PluginMethod public void copyImage(PluginCall call){
+        try{java.io.File dir=new java.io.File(getContext().getCacheDir(),"shared-images");if(!dir.exists()&&!dir.mkdirs())throw new java.io.IOException("No cache directory");java.io.File image=new java.io.File(dir,"hadith-"+System.currentTimeMillis()+".png");try(java.io.FileOutputStream stream=new java.io.FileOutputStream(image)){stream.write(android.util.Base64.decode(call.getString("data",""),android.util.Base64.DEFAULT));}
+            android.net.Uri uri=androidx.core.content.FileProvider.getUriForFile(getContext(),getContext().getPackageName()+".fileprovider",image);
+            android.content.ClipboardManager clipboard=(android.content.ClipboardManager)getContext().getSystemService(Context.CLIPBOARD_SERVICE);clipboard.setPrimaryClip(android.content.ClipData.newUri(getContext().getContentResolver(),"حديث",uri));JSObject out=new JSObject();out.put("copied",true);call.resolve(out);
+        }catch(Exception e){call.reject("تعذر نسخ الصورة",e);}
+    }
     @PluginMethod
     public void getInfo(PluginCall call) {
         ActivityManager manager=(ActivityManager)getContext().getSystemService(Context.ACTIVITY_SERVICE);
@@ -109,7 +162,14 @@ public class MihrabDevicePlugin extends Plugin {
             try{
                 android.appwidget.AppWidgetManager manager=android.appwidget.AppWidgetManager.getInstance(getContext());
                 boolean supported=Build.VERSION.SDK_INT>=26&&manager.isRequestPinAppWidgetSupported();
-                boolean requested=supported&&manager.requestPinAppWidget(new android.content.ComponentName(getContext(),MihrabPrayerWidget.class),null,null);
+                android.content.ComponentName provider = new android.content.ComponentName(getContext(), MihrabPrayerWidget.class);
+                android.widget.RemoteViews preview = new android.widget.RemoteViews(getContext().getPackageName(), R.layout.prayer_widget_preview_image);
+                android.os.Bundle extras = new android.os.Bundle();
+                extras.putParcelable(android.appwidget.AppWidgetManager.EXTRA_APPWIDGET_PREVIEW, preview);
+                if (Build.VERSION.SDK_INT >= 35) {
+                    manager.setWidgetPreview(provider, android.appwidget.AppWidgetProviderInfo.WIDGET_CATEGORY_HOME_SCREEN, preview);
+                }
+                boolean requested = supported && manager.requestPinAppWidget(provider, extras, null);
                 JSObject result=new JSObject();result.put("supported",supported);result.put("requested",requested);call.resolve(result);
             }catch(Exception error){call.reject("تعذر طلب إضافة ويدجت المواقيت.",error);}
         });

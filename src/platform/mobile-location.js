@@ -10,8 +10,8 @@ class MobileLocation{
   try{
    const plugin=this.plugin||(typeof window!=='undefined'?window.MihrabNative?.Geolocation:null);
    let position;
-   if(plugin){let permission=await plugin.checkPermissions();if(!['granted'].includes(permission.location)&&permission.coarseLocation!=='granted'){if(!requestPermission)throw Error('إذن الموقع غير متاح.');permission=await plugin.requestPermissions({permissions:['location']});}if(permission.location!=='granted'&&permission.coarseLocation!=='granted')throw Error('اسمح بالوصول إلى الموقع أثناء استخدام التطبيق، أو اختر مدينتك يدوياً.');position=await plugin.getCurrentPosition({enableHighAccuracy:true,timeout:20000,maximumAge:0});}
-   else if(typeof navigator!=='undefined'&&navigator.geolocation)position=await new Promise((resolve,reject)=>navigator.geolocation.getCurrentPosition(resolve,reject,{enableHighAccuracy:true,timeout:20000,maximumAge:0}));
+   if(plugin){let permission=await plugin.checkPermissions();if(!['granted'].includes(permission.location)&&permission.coarseLocation!=='granted'){if(!requestPermission)throw Error('إذن الموقع غير متاح.');permission=await plugin.requestPermissions({permissions:['coarseLocation']});}if(permission.location!=='granted'&&permission.coarseLocation!=='granted')throw Error('اسمح بالوصول إلى الموقع أثناء استخدام التطبيق، أو اختر مدينتك يدوياً.');position=await plugin.getCurrentPosition({enableHighAccuracy:false,timeout:20000,maximumAge:0});}
+   else if(typeof navigator!=='undefined'&&navigator.geolocation)position=await new Promise((resolve,reject)=>navigator.geolocation.getCurrentPosition(resolve,reject,{enableHighAccuracy:false,timeout:20000,maximumAge:0}));
    else throw Error('تحديد الموقع غير متاح؛ اختر المدينة يدوياً.');
    const {latitude:lat,longitude:lng,accuracy}=position.coords||{};
    if(!Number.isFinite(lat)||!Number.isFinite(lng)||Math.abs(lat)>90||Math.abs(lng)>180)throw Error('لم يصل موقع صالح من الجهاز.');

@@ -78,7 +78,7 @@ function collectRegionSettings() {
 }
 async function saveRegionSettings() {
   const status = document.getElementById('region-settings-status');
-  cancelInlineFeedback(status);
+
   try {
     if (state.locationBusy) throw Error('انتظر اكتمال تحميل المدن.');
     status.textContent = 'جارٍ الحفظ…';
@@ -197,7 +197,7 @@ async function saveAllSettings() {
   const status = document.getElementById('settings-save-status'),
     button = document.getElementById('btn-save-settings');
   button.disabled = true;
-  cancelInlineFeedback(status);
+
   try {
     const groups = dirtySettingsGroups();
     if (groups.length) await commitSettingsGroups(groups);
@@ -255,6 +255,8 @@ function initializeInlineSettings() {
 }
 
 function initializeSettingsSegments() {
+  const other = document.querySelector('[data-settings-section="other"]');
+  if (other) other.parentElement.append(other);
   for (const attribute of [
     'data-settings-section',
     'data-notice-section',
@@ -379,7 +381,7 @@ function settingsGroupSnapshot(group) {
           ...document.querySelectorAll(
             '#notification-settings input:not([data-select-search]),#notification-settings select',
           ),
-        ]
+        ].filter(node => !node.closest('#data-notice-section-panel-custom'))
       : [];
   return JSON.stringify(
     nodes.map((node) => [
@@ -392,10 +394,10 @@ function refreshSettingsDraftStatus() {
   const status = document.getElementById('settings-save-status');
   if (!status) return;
   if (dirtySettingsGroups().length) {
-    cancelInlineFeedback(status);
+
     status.textContent = 'لديك تغييرات لم تُحفظ بعد.';
   } else if (status.textContent === 'لديك تغييرات لم تُحفظ بعد.') {
-    cancelInlineFeedback(status);
+
     status.textContent = '';
   }
 }
@@ -1011,6 +1013,14 @@ document.getElementById('automatic-settings').addEventListener('change',refreshS
 
 async function initializeInitialLocation(){
  if(state.config?.locationPermissionAsked)return;
+ const native=window.MihrabNative?.DeviceInfo;
+ if(native?.requestLocationPermission){
+   const result=await native.requestLocationPermission();
+   const saved=await window.mihrabApi.saveSettings({locationPermissionAsked:true,locationPermissionDenied:!result.location});
+   renderSettingsForm(saved.config,null);
+   if(!result.location)showSuccessFeedback('يمكنك اختيار منطقتك يدوياً أو السماح بالموقع لاحقاً.');
+   return;
+ }
  try{
   await window.mihrabApi.saveSettings({locationPermissionAsked:true});
   const result=await window.mihrabApi.detectLocation();
@@ -1034,11 +1044,11 @@ document.getElementById('location-auto-update').addEventListener('change',async 
  try{
   const result=await window.mihrabApi.setAutomaticLocation(enabling);
   state.config=result.config;
-  input.checked=result.success&&result.config.location?.autoUpdate===true;
+  input.checked=result.config.location?.autoUpdate===true;
   syncAutomationButtons(result.config);
   if(!result.success)throw Error(result.error);
   if(result.prayerData)renderPrayerTimes(result.prayerData);
   if(result.quranState)renderQuranState(result.quranState);
- }catch(error){input.checked=false;showOperationResultModal({success:false,title:'تعذر تفعيل تحديث الموقع',summary:error.message});}
+ }catch(error){input.checked=state.config?.location?.autoUpdate===true;showOperationResultModal({success:false,title:'تعذر تفعيل تحديث الموقع',summary:error.message});}
  finally{input.disabled=false;}
 });

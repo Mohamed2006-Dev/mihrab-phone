@@ -16,10 +16,10 @@
 
 ## تحميل التطبيق
 
-الإصدار 1.0.0 متاح للتجربة والمراجعة. هذه نسخة تجريبية، ويُرحّب ببلاغات الأخطاء والملاحظات.
+الإصدار 1.0.1 متاح للتجربة والمراجعة. هذه نسخة تجريبية، ويُرحّب ببلاغات الأخطاء والملاحظات.
 
-- [تحميل APK موقّع — Android Release](https://github.com/Mohamed2006-Dev/mihrab-phone/releases/download/v1.0.0/Mihrab-Phone-1.0.0.apk)
-- [صفحة الإصدار وملف التحقق من سلامة التحميل](https://github.com/Mohamed2006-Dev/mihrab-phone/releases/tag/v1.0.0)
+- [تحميل APK موقّع — Android Release](https://github.com/Mohamed2006-Dev/mihrab-phone/releases/download/v1.0.1/Mihrab-Phone-1.0.1.apk)
+- [صفحة الإصدار وملف التحقق من سلامة التحميل](https://github.com/Mohamed2006-Dev/mihrab-phone/releases/tag/v1.0.1)
 - [جميع الإصدارات](https://github.com/Mohamed2006-Dev/mihrab-phone/releases)
 
 تُثبّت نسخة التجربة من ملف APK على جهاز Android متوافق. إذا رفض النظام تحديث نسخة موجودة بسبب اختلاف التوقيع، فاستخدم نسخة تحمل التوقيع نفسه؛ إزالة التطبيق قد تؤدي إلى فقد بياناته المحلية.

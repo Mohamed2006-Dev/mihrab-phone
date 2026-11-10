@@ -37,6 +37,7 @@ import MobileStorage from './mobile-storage.js';
 import MobileAudio from './mobile-audio.js';
 import MobileNotifications from './mobile-notifications.js';
 import MobileEvents from './mobile-events.js';
+import MobileLocalSync from './local-sync-phone.js';
 import { MihrabMobileApi, setupMihrabMobileApi } from './mobile-api.js';
 
 // تسجيل الملفات المرجعية في نظام الملفات الافتراضي بالذاكرة
@@ -95,12 +96,31 @@ if (typeof window !== 'undefined') {
   // تهيئة وتثبيت واجهة mihrabApi فوراً
   const api = setupMihrabMobileApi();
   window.mihrabApi = api;
+
   if(window.Capacitor?.isNativePlatform()){
-    App.addListener('resume',()=>api.refreshDeviceLocation().then(()=>api.prayerAutomation.tick(api.getAppNow(),{retry:true})).then(()=>api.rescheduleNotifications()).catch(error=>api.events.emit('app:notification-error',{message:error.message})));
+    const syncNative=registerPlugin('MihrabLocalSync');
+    const sync=new MobileLocalSync(api,syncNative);
+    const tick=()=>sync.tick({automatic:true}).catch(error=>console.warn('[Mihrab local sync]',error.name));
+    window.MihrabLocalSync={
+      syncStatus:()=>sync.status(),syncPair:(raw,direction,groups)=>sync.pair(raw,direction,groups),
+      syncFinish:()=>sync.finish(),syncCancel:()=>sync.cancel(),syncUnlink:id=>sync.unlink(id),syncDropLocation:id=>sync.dropLocation(id),
+      syncNow:()=>sync.tick(),syncConfigure:(id,direction,groups)=>sync.configure(id,direction,groups),syncSetAutomatic:enabled=>sync.setAutoSync(enabled),syncCameraPermission:()=>syncNative.cameraPermission(),
+    };
+    window.MihrabBoot?.whenReady.then(tick);
+    App.addListener('resume',tick);
+    window.addEventListener('online',tick);
+    setInterval(()=>{if(!document.hidden)tick();},30000);
+    window.MihrabNative.DeviceInfo.addListener('networkStatus',value=>window.dispatchEvent(new Event(value.connected?'online':'offline')));
+    App.addListener('resume',()=>api.syncSystemPermissions().then(()=>api.refreshDeviceLocation()).then(()=>api.prayerAutomation.tick(api.getAppNow(),{retry:true})).then(()=>api.rescheduleNotifications()).catch(error=>api.events.emit('app:notification-error',{message:error.message})));
     App.addListener('appUrlOpen',({url})=>{if(url==='mihrab://prayers')document.querySelector('.mobile-bottom-nav [data-tab="tab-prayers"]')?.click();});
     App.addListener('backButton',()=>{
       const overlay=document.querySelector('dialog[open],:popover-open');
       if(overlay){if(overlay.matches('dialog'))overlay.close();else overlay.hidePopover();return;}
+      const adhkarBack = document.getElementById('adhkar-back');
+      if (document.getElementById('tab-adhkar')?.classList.contains('active') && adhkarBack && !adhkarBack.hidden) {
+        adhkarBack.click();
+        return;
+      }
       if(!document.getElementById('tab-prayers')?.classList.contains('active'))document.querySelector('.mobile-bottom-nav [data-tab="tab-prayers"]')?.click();
       else App.minimizeApp();
     });

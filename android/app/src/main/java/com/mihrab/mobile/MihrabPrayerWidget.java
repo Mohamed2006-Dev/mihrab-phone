@@ -53,7 +53,12 @@ public class MihrabPrayerWidget extends AppWidgetProvider {
             view.setViewVisibility(R.id.widget_countdown,next==null?View.GONE:View.VISIBLE);
             view.setViewVisibility(R.id.widget_remaining,next==null?View.GONE:View.VISIBLE);
             SimpleDateFormat time=new SimpleDateFormat("HH:mm",Locale.US);time.setTimeZone(TimeZone.getTimeZone(data.optString("timeZone","UTC")));
-            view.setTextViewText(R.id.widget_time,next==null?"—":time.format(new Date(nextAt)));
+            // Use the same wall-clock label as the app, including its timezone corrections.
+            String clock = next == null ? "—" : next.optString("time24", "");
+            if (next != null && !clock.matches("(?:[01][0-9]|2[0-3]):[0-5][0-9]")) {
+                clock = time.format(new Date(nextAt)); // Schedules cached before the update.
+            }
+            view.setTextViewText(R.id.widget_time, clock);
             if(next!=null){
                 view.setTextViewText(R.id.widget_remaining,elapsed?"مضى على الأذان  ":"الوقت المتبقي  ");
                 view.setBoolean(R.id.widget_countdown,"setCountDown",!elapsed);

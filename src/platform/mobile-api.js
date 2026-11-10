@@ -25,7 +25,7 @@ const { policy: networkPolicy, allowed: networkAllowed, categoryFor } = typeof r
 // استيراد المحركات المشتركة
 const PrayerEngine = typeof require !== 'undefined' ? require('../engines/prayer-engine') : null;
 const HadithEngine = typeof require !== 'undefined' ? require('../engines/hadith-engine') : null;
-const { renderHadithImage, renderHadithSvg } = typeof require !== 'undefined' ? require('../engines/hadith-image') : {};
+const { buildHadithImageHtml, renderHadithImage, renderHadithSvg } = typeof require !== 'undefined' ? require('../engines/hadith-image') : {};
 const QuranWirdEngine = typeof require !== 'undefined' ? require('../engines/quran-wird-engine') : null;
 const YouTubeRssEngine = typeof require !== 'undefined' ? require('../engines/youtube-rss-engine') : null;
 const ThemeEngine = typeof require !== 'undefined' ? require('../engines/theme-engine') : null;
@@ -164,6 +164,7 @@ class MihrabMobileApi {
     }
     if(typeof window!=='undefined'&&window.MihrabNative?.DeviceInfo){try{this.hardware=await window.MihrabNative.DeviceInfo.getInfo();document.documentElement.style.setProperty('--safe-top',(this.hardware.safeTop||0)+'px');document.documentElement.style.setProperty('--safe-bottom',(this.hardware.safeBottom||0)+'px');}catch(error){console.warn('Device info unavailable',error);}}
 
+    await this.syncSystemPermissions();
     const config = this.storage.getConfig();
     const now = this.getAppNow();
     await this._ensureCountryCitiesLoaded(config.location?.countryCode || config.location?.country || 'SA');
@@ -227,7 +228,15 @@ class MihrabMobileApi {
       const data=this.prayerEngine.calculateLocalPrayerTimes(this.getAppNow());
       await this.publishPrayerWidget();
       const recommendation=this.youtubeEngine.getFeedState('all').dailyRecommendation;
-      return this.notifications.schedulePrayerAlarms(data,this.storage.getConfig(),null,recommendation);
+      const config = this.storage.getConfig();
+      const now = this.getAppNow();
+      const zone = data.location?.effectiveTimeZone || data.location?.timeZone;
+      const horizon = config.notifications?.customReminders?.length ? 9 : 4;
+      const days = Array.from({ length: horizon }, (_, index) => {
+            const date = require('../engines/prayer-times-engine').shiftDay(now, index - 1, zone);
+            return { date, data: index === 1 ? data : this.prayerEngine.calculateLocalPrayerTimes(date) };
+          });
+      return this.notifications.schedulePrayerAlarms(data, config, null, recommendation, days, now);
     });
     return this.notificationQueue;
   }
@@ -239,7 +248,10 @@ class MihrabMobileApi {
       if(enabled){
         const result=await this.locationService.detect({requestPermission:true});
         if(!result.success){
-          const config=this.storage.saveConfig({location:{autoUpdate:false},locationPermissionAsked:true,locationPermissionDenied:true});
+          const native=typeof window!=='undefined'?window.MihrabNative?.DeviceInfo:null;
+          const system=native?.getPermissionStates?await native.getPermissionStates():null;
+          const allowed=system?.location===true;
+          const config=this.storage.saveConfig({location:{autoUpdate:allowed},locationPermissionAsked:true,locationPermissionDenied:!allowed});
           return {success:false,error:result.error,config};
         }
         const previous=this.storage.getConfig().location||{},geo=this.prayerEngine.geography,country=geo.country(result.countryCode);
@@ -256,13 +268,43 @@ class MihrabMobileApi {
     }finally{this.automaticLocationBusy=false;}
   }
 
+  async syncSystemPermissions(requestNotifications=false){
+    if(typeof window==='undefined'||!window.MihrabNative?.Geolocation||this.permissionSyncBusy)return;
+    this.permissionSyncBusy=true;
+    try{
+      const c=this.storage.getConfig(),native=window.MihrabNative.DeviceInfo;
+      const system=native?.getPermissionStates?await native.getPermissionStates():null;
+      const geo=system?null:await window.MihrabNative.Geolocation.checkPermissions();
+      const location=system?system.location:geo.location==='granted'||geo.coarseLocation==='granted';
+      let notices=system?system.notifications:await this.notifications.checkPermission();
+      if(requestNotifications&&!c.notificationPermissionAsked){
+        this.storage.saveConfig({notificationPermissionAsked:true});
+        notices=await this.notifications.requestPermission();
+      }
+      let patch={systemPermissions:{location,notifications:notices}};
+      if(!notices){
+        if(!c.notificationPermissionSnapshot)patch.notificationPermissionSnapshot={notifications:c.notifications||{},mode:c.quranWird?.notificationMode||'both'};
+        patch.notifications={...c.notifications,prayerEnabled:false,prePrayerEnabled:false,fridayPrePrayerEnabled:false,lessons:{...c.notifications?.lessons,enabled:false}};
+        patch.quranWird={notificationMode:'none'};
+        await this.notifications.cancelAll();
+      }else if(c.notificationPermissionSnapshot){
+        patch.notifications=c.notificationPermissionSnapshot.notifications;patch.quranWird={notificationMode:c.notificationPermissionSnapshot.mode};patch.notificationPermissionSnapshot=null;
+      }
+      if(!location){patch.location={autoUpdate:false};patch.locationPermissionDenied=true;}
+      this.storage.saveConfig(patch);
+      if(location&&(c.systemPermissions?.location!==true||c.locationPermissionDenied===true)){await this.setAutomaticLocation(true);}
+      this.events.emit('app:config-updated',this.storage.getConfig());
+      if(notices!==c.systemPermissions?.notifications)this.events.emit('app:permission-sync-completed');
+      if(notices!==c.systemPermissions?.notifications)this.rescheduleNotifications().catch(error=>this.events.emit('app:notification-error',{message:error.message}));
+    }finally{this.permissionSyncBusy=false;}
+  }
   async refreshDeviceLocation(){
     const location=this.storage.getConfig().location;
-    if(location?.source!=='device'||location.autoUpdate===false||this.locationRefreshing||Date.now()-(this.lastLocationAttempt||0)<1800000)return;
+    if(location?.autoUpdate!==true||this.locationRefreshing||Date.now()-(this.lastLocationAttempt||0)<1800000)return;
     this.lastLocationAttempt=Date.now();this.locationRefreshing=true;
-    try{const result=await this.locationService.detect({requestPermission:false});if(!result.success){this.storage.saveConfig({location:{autoUpdate:false},locationPermissionDenied:true});this.events.emit('app:config-updated',this.storage.getConfig());return;}
+    try{const result=await this.locationService.detect({requestPermission:false});if(!result.success){const native=window.MihrabNative?.DeviceInfo;const system=native?.getPermissionStates?await native.getPermissionStates():null;if(system?.location===false)this.storage.saveConfig({location:{autoUpdate:false},locationPermissionDenied:true});this.events.emit('app:config-updated',this.storage.getConfig());return;}
       const country=this.prayerEngine.geography.country(result.countryCode);
-      const res=await this.saveSettings({location:{...location,lat:result.lat,lng:result.lng,city:result.distanceKm<150?result.city:'موقعي الحالي',countryCode:result.countryCode,country:country?.name||result.countryCode,timeZone:result.timeZone,accuracy:result.accuracy,calculationMethod:location.calculationMethodSelection==='manual'?location.calculationMethod:this.prayerEngine.geography.methodForCountry(result.countryCode)}});
+      const res=await this.saveSettings({location:{...location,source:'device',autoDetect:true,lat:result.lat,lng:result.lng,city:result.distanceKm<150?result.city:'موقعي الحالي',countryCode:result.countryCode,country:country?.name||result.countryCode,timeZone:result.timeZone,accuracy:result.accuracy,calculationMethod:location.calculationMethodSelection==='manual'?location.calculationMethod:this.prayerEngine.geography.methodForCountry(result.countryCode)}});
       this.events.emit('app:region-updated',res.config);return res;
     }finally{this.locationRefreshing=false;}
   }
@@ -335,35 +377,26 @@ class MihrabMobileApi {
   }
 
   async previewHadithImage(key) {
-    const hadith = this.hadithEngine.getExportHadith(key);
-    const svg = renderHadithSvg(hadith);
-    return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+    return 'data:image/png;base64,'+await this.hadithPng(key);
   }
 
-  async copyHadithImage(key) {
-    const preview = await this.previewHadithImage(key);
-    if (typeof navigator !== 'undefined' && navigator.clipboard) {
-      try {
-        await navigator.clipboard.writeText(preview);
-      } catch (_) {}
-    }
-    return { copied: true };
+  async hadithPng(key){
+    const native=window.MihrabNative?.DeviceInfo;if(!native?.renderHadithCard)throw Error('إنشاء الصورة يتطلب نسخة Android المحدثة.');
+    const font=async weight=>{const response=await fetch('./assets/fonts/amiri-arabic-'+weight+'-normal.woff2');if(!response.ok)throw Error('تعذر قراءة خط بطاقة الحديث المحلي.');const bytes=new Uint8Array(await response.arrayBuffer());let binary='';for(let i=0;i<bytes.length;i++)binary+=String.fromCharCode(bytes[i]);return btoa(binary);};
+    const [regular,bold]=await Promise.all([font(400),font(700)]);
+    const html=buildHadithImageHtml(this.hadithEngine.getExportHadith(key),'',regular,bold);
+    const result=await native.renderHadithCard({html});return result.data;
   }
-
-  async exportHadithImage(key) {
-    const hadith = this.hadithEngine.getExportHadith(key);
-    const svg = renderHadithSvg(hadith);
-    const dataUri = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
-
-    if (typeof document !== 'undefined') {
-      const a = document.createElement('a');
-      a.href = dataUri;
-      a.download = `hadith-${String(key).slice(0, 16)}.svg`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-    }
-    return { saved: true, fileName: `hadith-${key}.svg` };
+  async copyHadithImage(key){
+    const data=await this.hadithPng(key),native=window.MihrabNative?.DeviceInfo;
+    if(native?.copyImage)return native.copyImage({data});
+    if(!navigator.clipboard?.write||typeof ClipboardItem==='undefined')throw Error('نسخ الصور غير متاح في هذه البيئة.');
+    const blob=await(await fetch('data:image/png;base64,'+data)).blob();await navigator.clipboard.write([new ClipboardItem({'image/png':blob})]);return {copied:true};
+  }
+  async exportHadithImage(key){
+    const data=await this.hadithPng(key),native=window.MihrabNative?.DeviceInfo;
+    if(native?.saveImage)return native.saveImage({data});
+    throw Error('حفظ الصورة يتطلب تطبيق Android.');
   }
 
   // ==========================================================================
@@ -387,6 +420,7 @@ class MihrabMobileApi {
   }
 
   async toggleQuranNotification(kind) {
+    if(this.notifications.plugin&&!(await this.notifications.checkPermission()))throw Error('اسمح بإشعارات التطبيق من إعدادات الإشعارات أولاً.');
     if (!['reading', 'hifz'].includes(kind)) throw Error('نوع ورد غير صالح.');
     const current = this.storage.getConfig().quranWird?.notificationMode || 'both';
     let reading = ['both', 'reading_only'].includes(current);
@@ -436,6 +470,16 @@ class MihrabMobileApi {
       return {opened:true};
     }
     return {opened:false};
+  }
+
+  async getLessonById(id) { return this.youtubeEngine.getLessonById(id); }
+  async getAnotherLesson(excluded) { return this.youtubeEngine.getAnotherLesson(excluded); }
+  async snoozeLesson(id) {
+    const video = this.youtubeEngine.getLessonById(id);
+    if (!video) throw new Error('هذا الدرس غير متاح.');
+    if (this.storage.getConfig().notifications?.lessons?.enabled === false)
+      throw new Error('تنبيهات الدروس متوقفة.');
+    return this.notifications.snoozeLesson(video);
   }
 
   async getYoutubePage(options = {}) {
@@ -497,7 +541,15 @@ class MihrabMobileApi {
   // ==========================================================================
   // 7. الإعدادات، إمكانية الوصول والأداء (Settings & Accessibility)
   // ==========================================================================
-  async saveSettings(newConfig) {
+  async saveCustomReminders(rows) {
+    const reminders = require('../engines/custom-reminders');
+    reminders.validate(rows);
+    const saved = this.storage.saveConfig({ notifications: { customReminders: reminders.unique(rows) } });
+    this.rescheduleNotifications().catch(error => this.events.emit('app:notification-error', { message: error.message }));
+    return saved.notifications.customReminders;
+  }
+
+  async saveSettings(newConfig, fromSync = false) {
     const previous = this.storage.getConfig();
     if(newConfig.location?.autoUpdate===true && newConfig.location?.source!=='device'){
       const detected=await this.detectLocation();
@@ -537,6 +589,8 @@ class MihrabMobileApi {
       throw Error('مستوى الأداء غير صالح.');
     }
 
+    if (patch.notifications?.customReminders !== undefined)
+      require('../engines/custom-reminders').validate(patch.notifications.customReminders);
     const saved = this.storage.saveConfig(patch);
     if(newConfig.location||newConfig.automation||newConfig.network)setTimeout(()=>this.prayerAutomation.tick(this.getAppNow()),0);
     const prayerData = this.prayerEngine.calculateLocalPrayerTimes(this.getAppNow());
@@ -545,8 +599,17 @@ class MihrabMobileApi {
     // إعادة جدولة الإشعارات وفق الإعدادات الجديدة
     this.rescheduleNotifications(prayerData).catch(error=>this.events.emit('app:notification-error',{message:error.message}));
 
-    this.events.emit('app:config-updated', saved);
-    this.events.emit('app:prayer-schedule', prayerData);
+    if (fromSync) {
+      this.events.emit('app:sync-applied', {
+        config: saved,
+        prayerData: patch.location ? prayerData : undefined,
+        quranState: patch.quranWird || patch.location ? quranState : undefined,
+        youtubeState: patch.youtube ? this.youtubeEngine.getFeedState() : undefined,
+      });
+    } else {
+      this.events.emit('app:config-updated', saved);
+      this.events.emit('app:prayer-schedule', prayerData);
+    }
 
     return {
       config: saved,
@@ -643,7 +706,7 @@ class MihrabMobileApi {
     if(this.lastWidgetKey===key)return {unchanged:true};
     const prayers=[];
     for(let i=-1;i<8;i++)for(const prayer of this.prayerEngine.calculateLocalPrayerTimes(G.shiftDay(now,i,loc.timeZone)).prayers){
-      if(prayer.id!=='sunrise'&&prayer.time)prayers.push({id:prayer.id,name:prayer.name,at:new Date(prayer.time).getTime()});
+      if(prayer.id!=='sunrise'&&prayer.time)prayers.push({id:prayer.id,name:prayer.name,at:new Date(prayer.time).getTime(),time24:prayer.time24});
     }
     await plugin.updatePrayerWidget({payload:JSON.stringify({city:loc.city,timeZone:loc.timeZone,graceMs:require('../ui/prayer-display').GRACE_MS,prayers})});
     this.lastWidgetKey=key;return {updated:true};
@@ -664,7 +727,7 @@ class MihrabMobileApi {
   async getUpdateStatus() {
     return {
       phase: 'unsupported',
-      version: '1.0.0',
+      version: '1.0.1',
       nextVersion: null,
       percent: 0,
       lastChecked: null,
@@ -684,8 +747,19 @@ class MihrabMobileApi {
   // ==========================================================================
   onPrayerScheduleChanged(cb) { return this.events.on('app:prayer-schedule', cb); }
   onPrayerReached(cb) { return this.events.on('app:prayer-reached', cb); }
+  onSyncApplied(cb) { return this.events.on('app:sync-applied', cb); }
   onConfigUpdated(cb) { return this.events.on('app:config-updated', cb); }
-  onNavigateTo(cb) { return this.events.on('app:navigate', cb); }
+  onNavigateTo(cb) {
+    const unsubscribe = this.events.on('app:navigate', cb);
+    this.notifications.navigationListener = cb;
+    const pending = this.notifications.pendingNavigation;
+    this.notifications.pendingNavigation = null;
+    if (pending) queueMicrotask(() => cb(pending));
+    return () => {
+      unsubscribe();
+      if (this.notifications.navigationListener === cb) this.notifications.navigationListener = null;
+    };
+  }
   onNotification(cb) { return this.events.on('app:notification', cb); }
   onAutomationStatus(cb) { return this.events.on('app:automation-status',cb); }
   onNotificationError(cb) { return this.events.on('app:notification-error', cb); }

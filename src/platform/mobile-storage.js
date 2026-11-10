@@ -128,13 +128,7 @@ class MobileStorage {
         },
       },
       youtube: {
-        channels: [
-          {
-            channelId: 'UC6vT9L5A1pD0vA-ZfOaQG6w',
-            channelTitle: 'قناة الدروس الإسلامية المختارة',
-            sourceType: 'channel_id',
-          },
-        ],
+        channels: [],
         preferredContextIds: ['ctx_01', 'ctx_02', 'ctx_03', 'ctx_04', 'ctx_05', 'ctx_10'],
       },
       performance: {
@@ -249,6 +243,10 @@ class MobileStorage {
     const defaults = this.getDefaultConfig();
     const saved = this.readJsonSafe('user-config', {});
     const merged = this.deepMerge(defaults, saved);
+    if(Array.isArray(merged.youtube?.channels)){
+      const channels=merged.youtube.channels.filter(c=>!(c.channelId==='UC6vT9L5A1pD0vA-ZfOaQG6w'&&(c.channelTitle||c.name)==='قناة الدروس الإسلامية المختارة'));
+      if(channels.length!==merged.youtube.channels.length){merged.youtube={...merged.youtube,channels};this.writeJsonSafe('user-config',merged);}
+    }
     if (NotificationSettings?.normalizeConfig) {
       const normalized=NotificationSettings.normalizeConfig(merged);delete normalized.screenLock;delete normalized.accessibility;return normalized;
     }

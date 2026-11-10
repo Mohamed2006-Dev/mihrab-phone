@@ -13,7 +13,7 @@ function bindLocalSync() {
   }
   function waitForApproval(){
     if(approval)return;
-    const session={timer:null};
+    const session={timer:null,deadline:Date.now()+10*60*1000};
     approval=session;
     showSuccessFeedback('بانتظار موافقة الحاسوب.');
     async function poll(){
@@ -27,6 +27,10 @@ function bindLocalSync() {
         showSuccessFeedback('تم ربط الهاتف بالحاسوب.');
       }catch(error){
         if(approval!==session)return;
+        if(error.retryable&&Date.now()<session.deadline){
+          session.timer=setTimeout(poll,1800);
+          return;
+        }
         stopApproval();
         await api.syncCancel();
         await render();
@@ -55,7 +59,7 @@ function bindLocalSync() {
   };
   const encodeInvite=raw=>codePrefix+btoa(raw).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
   const decodeInvite=code=>{
-    const value=code.replace(/\s+/g,'');
+    const value=code.replace(/[\s\u061c\u200e\u200f\u202a-\u202e\u2066-\u2069]+/g,'');
     if(!/^mihrab1\.[A-Za-z0-9_-]{1,700}$/.test(value))throw Error('رمز الربط النصي غير صالح.');
     try{return atob(value.slice(codePrefix.length).replace(/-/g,'+').replace(/_/g,'/'));}
     catch{throw Error('رمز الربط النصي غير صالح.');}
@@ -180,6 +184,12 @@ function bindLocalSync() {
       deviceList.append(row);
     }
   }
+  api.onSyncLinkRevoked?.(()=>{
+    editingDevice=false;
+    if(devices.open)devices.close();
+    if(!panel.hidden)run(render);
+    showSuccessFeedback('تم فك ربط الجهاز من الحاسوب.');
+  });
   window.addEventListener('mihrab-sync-applied',()=>{
     if(devices.open&&!editingDevice)api.syncStatus().then(showDevices).catch(()=>{});
   });

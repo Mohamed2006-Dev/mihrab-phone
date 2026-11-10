@@ -109,7 +109,7 @@ public class MihrabLocalSyncPlugin extends Plugin {
                 String pin = call.getString("pin", "");
                 String route = call.getString("route", "");
                 if (!privateIp(host) || !pin.matches("[0-9a-f]{64}") ||
-                        !Arrays.asList("/pair", "/pair-status", "/exchange", "/unlink", "/drop-location", "/configure").contains(route))
+                        !Arrays.asList("/pair", "/pair-status", "/status", "/exchange", "/unlink", "/drop-location", "/configure").contains(route))
                     throw new IllegalArgumentException("invalid_local_endpoint");
                 byte[] expected = new byte[32];
                 for (int i = 0; i < expected.length; i++)
@@ -150,8 +150,10 @@ public class MihrabLocalSyncPlugin extends Plugin {
                 int status = connection.getResponseCode();
                 JSObject result = new JSObject();
                 result.put("status", status);
-                if (status == 200) {
-                    try (java.io.InputStream input = connection.getInputStream()) {
+                java.io.InputStream response = status < 400
+                        ? connection.getInputStream() : connection.getErrorStream();
+                if (response != null) {
+                    try (java.io.InputStream input = response) {
                         ByteArrayOutputStream bytes = new ByteArrayOutputStream();
                         byte[] chunk = new byte[8192];
                         int n;

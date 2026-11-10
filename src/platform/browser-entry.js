@@ -104,12 +104,18 @@ if (typeof window !== 'undefined') {
     window.MihrabLocalSync={
       syncStatus:()=>sync.status(),syncPair:(raw,direction,groups)=>sync.pair(raw,direction,groups),
       syncFinish:()=>sync.finish(),syncCancel:()=>sync.cancel(),syncUnlink:id=>sync.unlink(id),syncDropLocation:id=>sync.dropLocation(id),
+      onSyncLinkRevoked:callback=>api.events.on("app:sync-link-revoked",callback),
       syncNow:()=>sync.tick(),syncConfigure:(id,direction,groups)=>sync.configure(id,direction,groups),syncSetAutomatic:enabled=>sync.setAutoSync(enabled),syncCameraPermission:()=>syncNative.cameraPermission(),
     };
     window.MihrabBoot?.whenReady.then(tick);
     App.addListener('resume',tick);
     window.addEventListener('online',tick);
     setInterval(()=>{if(!document.hidden)tick();},30000);
+    setInterval(()=>{
+      const panel=document.getElementById('data-settings-section-panel-sync');
+      if(!document.hidden && panel && !panel.hidden && document.getElementById('tab-settings')?.classList.contains('active'))
+        sync.tick({statusOnly:true}).catch(error=>console.warn('[Mihrab local sync]',error.name));
+    },4000);
     window.MihrabNative.DeviceInfo.addListener('networkStatus',value=>window.dispatchEvent(new Event(value.connected?'online':'offline')));
     App.addListener('resume',()=>api.syncSystemPermissions().then(()=>api.refreshDeviceLocation()).then(()=>api.prayerAutomation.tick(api.getAppNow(),{retry:true})).then(()=>api.rescheduleNotifications()).catch(error=>api.events.emit('app:notification-error',{message:error.message})));
     App.addListener('appUrlOpen',({url})=>{if(url==='mihrab://prayers')document.querySelector('.mobile-bottom-nav [data-tab="tab-prayers"]')?.click();});

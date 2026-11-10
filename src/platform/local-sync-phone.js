@@ -26,7 +26,10 @@ class MobileLocalSync {
       route,body:JSON.stringify({version:1,...body})});
     if(result.status!==200){
       const error=Error(result.status===403?'انتهى الرمز أو أُلغي الربط.':'رفض الحاسوب طلب المزامنة.');
-      error.status=result.status;throw error;
+      error.status=result.status;
+      try{error.code=JSON.parse(result.body).error;}
+      catch{ /* Missing or malformed replies cannot confirm revocation. */ }
+      throw error;
     }
     return JSON.parse(result.body);
   }
@@ -49,18 +52,30 @@ class MobileLocalSync {
   async finish(){
     await this.ready;
     const offer=this.candidate;
-    if(!offer||offer.until<Date.now())throw Error('انتهت مهلة الاقتران.');
-    const response=await this.request(offer,'/pair-status',{invitation:offer.invitation,phoneId:this.state.phoneId});
+    if(!offer)throw Error('انتهت مهلة الاقتران.');
+    let response;
+    try{
+      response=await this.request(offer,'/pair-status',{invitation:offer.invitation,phoneId:this.state.phoneId});
+    }catch(error){
+      error.retryable=!error.status||error.status>=500;
+      throw error;
+    }
     if(this.candidate!==offer)throw Error("أُلغيت دعوة الربط.");
     if(response.waiting)return {waiting:true};
     const link=Contract.validateLink(response.link);
     if(link.desktopId!==offer.desktopId||link.phoneId!==this.state.phoneId||
       link.direction!==offer.direction||!Contract.same(link.groups,offer.groups)||!/^[\w-]{43}$/.test(link.token||''))
       throw Error('تغيّرت صلاحيات الدعوة.');
-    this.state.links.push({host:offer.host,pin:offer.pin,link,sequence:0});
-    await this.persist();
+    const peer={host:offer.host,pin:offer.pin,link,sequence:0};
+    this.state.links.push(peer);
+    try{await this.persist();}
+    catch(error){
+      this.state.links=this.state.links.filter(item=>item!==peer);
+      error.retryable=true;
+      throw error;
+    }
     this.candidate=null;
-    this.tick({automatic:true}).catch(()=>{});
+    this.tick({statusOnly:true}).finally(()=>this.tick({automatic:true})).catch(()=>{});
     return this.status();
   }
   cancel(){this.candidate=null;return this.status();}
@@ -103,30 +118,41 @@ class MobileLocalSync {
     if(!peer)return this.status();
     this.running=true;
     try{
-      try{await this.request(peer,'/unlink',{});}catch(error){if(error.status!==403)throw Error('أعد الاتصال بالحاسوب لفك الربط من الهاتف، أو افصله أولاً على الحاسوب.');}
+      try{await this.request(peer,'/unlink',{});}catch(error){if(error.status!==403||error.code!=='unpaired')throw Error('أعد الاتصال بالحاسوب لفك الربط من الهاتف، أو افصله أولاً على الحاسوب.');}
       this.state.links=this.state.links.filter(item=>item!==peer);
       await this.persist();
       return this.status();
     }finally{this.running=false;}
   }
-  async tick({automatic=false}={}){
+  async tick({automatic=false,statusOnly=false}={}){
     await this.ready;
     if(this.running||!this.state.links.length)return this.status();
     this.running=true;
     try{
+      const revoked=[];
       for(const peer of this.state.links){
         try{
+          if(statusOnly){
+            await this.request(peer,'/status',{});
+            continue;
+          }
           const config=this.api.storage.getConfig();
           const shareLocation=Contract.locationAllowed(peer.link);
           const scope=automatic&&this.state.autoSync===false?'location':'all';
           const selected=scope==='location'?(shareLocation?['location']:[]):
             peer.link.groups.filter(group=>group!=='location'||shareLocation);
-          if(!selected.length)continue;
+          if(!selected.length){
+            await this.request(peer,'/status',{});
+            continue;
+          }
           const system=shareLocation?await window.MihrabNative.DeviceInfo.getPermissionStates():null;
           const groups={};
           for(const group of selected)
             groups[group]=group==='location'?Contract.phoneLocation({...config,location:{...this.api.prayerEngine.getLocation(),source:config.location?.source||(config.location?.autoDetect===false?'manual':null)}},Boolean(system?.location)):Contract.project(config,group);
-          if(scope==='location'&&!groups.location)continue;
+          if(scope==='location'&&!groups.location){
+            await this.request(peer,'/status',{});
+            continue;
+          }
           const sequence=++peer.sequence;
           await this.persist();
           const result=await this.request(peer,'/exchange',{sequence,scope,groups});
@@ -143,10 +169,16 @@ class MobileLocalSync {
           peer.last=Date.now();
           if(scope==='all')peer.conflicts=result.conflicts||[];
         }catch(error){
-          peer.last=null;
+          if(error.status===403&&error.code==='unpaired')revoked.push(peer);
+          else peer.last=null;
         }
       }
-      await this.persist();
+      const previous=this.state.links;
+      if(statusOnly&&!revoked.length)return this.status();
+      if(revoked.length)this.state.links=previous.filter(peer=>!revoked.includes(peer));
+      try{await this.persist();}
+      catch(error){this.state.links=previous;throw error;}
+      if(revoked.length)this.api.events.emit('app:sync-link-revoked');
     }finally{this.running=false;}
     return this.status();
   }

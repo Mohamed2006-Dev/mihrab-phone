@@ -20,6 +20,14 @@ import java.util.TimeZone;
 
 /** Native home-screen view. No WebView, GPS polling, network or per-second service. */
 public class MihrabPrayerWidget extends AppWidgetProvider {
+    private static final int[] THEME_BACKGROUNDS = {
+        R.drawable.prayer_widget_emerald_light,
+        R.drawable.prayer_widget_emerald_dark,
+        R.drawable.prayer_widget_andalusian_light,
+        R.drawable.prayer_widget_andalusian_dark,
+        R.drawable.prayer_widget_royal_light,
+        R.drawable.prayer_widget_royal_dark
+    };
     private static final String REFRESH="com.mihrab.mobile.WIDGET_REFRESH";
     private static PendingIntent refreshIntent(Context context){
         return PendingIntent.getBroadcast(context,65500,new Intent(context,MihrabPrayerWidget.class).setAction(REFRESH),PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
@@ -31,6 +39,9 @@ public class MihrabPrayerWidget extends AppWidgetProvider {
         super.onReceive(context,intent);
         String action=intent.getAction();
         if(REFRESH.equals(action)||Intent.ACTION_BOOT_COMPLETED.equals(action)||Intent.ACTION_TIME_CHANGED.equals(action)||Intent.ACTION_TIMEZONE_CHANGED.equals(action)||Intent.ACTION_MY_PACKAGE_REPLACED.equals(action))refreshAll(context);
+    }
+    private static void setThemeColor(RemoteViews view,int id,String color){
+        if(color.matches("#[0-9a-fA-F]{6}"))view.setTextColor(id,android.graphics.Color.parseColor(color));
     }
     public static boolean refreshAll(Context context){
         AppWidgetManager manager=AppWidgetManager.getInstance(context);
@@ -47,6 +58,17 @@ public class MihrabPrayerWidget extends AppWidgetProvider {
             JSONObject next=state.index<0?null:prayers.getJSONObject(state.index);
             long nextAt=state.index<0?0:times[state.index];boolean elapsed=state.elapsed;
             RemoteViews view=new RemoteViews(context.getPackageName(),R.layout.prayer_widget);
+            JSONObject palette=data.optJSONObject("palette");
+            if(palette!=null){
+                int index=palette.optInt("background",-1);
+                if(index>=0&&index<THEME_BACKGROUNDS.length)
+                    view.setInt(R.id.widget_root,"setBackgroundResource",THEME_BACKGROUNDS[index]);
+                setThemeColor(view,R.id.widget_prayer,palette.optString("text"));
+                setThemeColor(view,R.id.widget_city,palette.optString("muted"));
+                setThemeColor(view,R.id.widget_remaining,palette.optString("muted"));
+                setThemeColor(view,R.id.widget_time,palette.optString("accent"));
+                setThemeColor(view,R.id.widget_countdown,palette.optString("accent"));
+            }
             view.setTextViewText(R.id.widget_city,data.optString("city","محراب"));
             String prayerName=next==null?"":next.optString("name").trim();
             view.setTextViewText(R.id.widget_prayer,next==null?"افتح محراب لتحديث المواقيت":WidgetPrayerState.title(prayerName));

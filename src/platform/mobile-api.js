@@ -212,6 +212,7 @@ class MihrabMobileApi {
   async setTheme(themeId, mode) {
     const newState = this.themeEngine.setTheme(themeId, mode);
     this.events.emit('theme:live-reloaded', newState);
+    await this.publishPrayerWidget().catch(error=>console.warn('[Mihrab widget]',error.message));
     return newState;
   }
 
@@ -702,13 +703,19 @@ class MihrabMobileApi {
     const plugin=typeof window!=='undefined'&&window.MihrabNative?.DeviceInfo;
     if(!plugin?.updatePrayerWidget)return {supported:false};
     const now=this.getAppNow(),G=require('../engines/prayer-times-engine'),config=this.storage.getConfig(),loc=this.prayerEngine.getLocation();
-    const key=JSON.stringify([G.dateKey(now,loc.timeZone),loc,config.prayerAdjustments,config.officialSync?.lastSuccessfulReport]);
+    const {activeTheme,activeMode,cssVariables}=this.themeEngine.getActiveThemeState();
+    const themeIndex=['emerald-sanctuary','andalusian-sand','royal-sapphire'].indexOf(activeTheme);
+    const palette={
+      background:themeIndex<0?-1:themeIndex*2+(activeMode==='dark'?1:0),
+      text:cssVariables['--text-primary'],muted:cssVariables['--text-secondary'],accent:cssVariables['--accent-primary'],
+    };
+    const key=JSON.stringify([G.dateKey(now,loc.timeZone),loc,config.prayerAdjustments,config.officialSync?.lastSuccessfulReport,palette]);
     if(this.lastWidgetKey===key)return {unchanged:true};
     const prayers=[];
     for(let i=-1;i<8;i++)for(const prayer of this.prayerEngine.calculateLocalPrayerTimes(G.shiftDay(now,i,loc.timeZone)).prayers){
       if(prayer.id!=='sunrise'&&prayer.time)prayers.push({id:prayer.id,name:prayer.name,at:new Date(prayer.time).getTime(),time24:prayer.time24});
     }
-    await plugin.updatePrayerWidget({payload:JSON.stringify({city:loc.city,timeZone:loc.timeZone,graceMs:require('../ui/prayer-display').GRACE_MS,prayers})});
+    await plugin.updatePrayerWidget({payload:JSON.stringify({city:loc.city,timeZone:loc.timeZone,palette,graceMs:require('../ui/prayer-display').GRACE_MS,prayers})});
     this.lastWidgetKey=key;return {updated:true};
   }
   async requestPrayerWidget(){

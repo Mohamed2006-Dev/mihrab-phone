@@ -29,6 +29,10 @@ import projectPublicInfoData from '../../data/personal-data.json';
 import themeEmerald from '../../themes/emerald-sanctuary.json';
 import themeSapphire from '../../themes/royal-sapphire.json';
 import themeSand from '../../themes/andalusian-sand.json';
+import themeCopper from '../../themes/copper-courtyard.json';
+import themeDusk from '../../themes/dusk-atelier.json';
+import themeClassic from '../../themes/classic-monochrome.json';
+import themeAmber from '../../themes/amber-gold.json';
 
 import { registerMemoryFile } from './browser-shims.js';
 import { CAPABILITIES } from './capabilities.js';
@@ -82,6 +86,10 @@ if (typeof window !== 'undefined') {
     'emerald-sanctuary': themeEmerald,
     'royal-sapphire': themeSapphire,
     'andalusian-sand': themeSand,
+    'copper-courtyard': themeCopper,
+    'dusk-atelier': themeDusk,
+    'classic-monochrome': themeClassic,
+    'amber-gold': themeAmber,
   };
 
   window.__MIHRAB_LOCATION_INDEX__=locationIndex;
@@ -120,6 +128,13 @@ if (typeof window !== 'undefined') {
     App.addListener('resume',()=>api.syncSystemPermissions().then(()=>api.refreshDeviceLocation()).then(()=>api.prayerAutomation.tick(api.getAppNow(),{retry:true})).then(()=>api.rescheduleNotifications()).catch(error=>api.events.emit('app:notification-error',{message:error.message})));
     App.addListener('appUrlOpen',({url})=>{if(url==='mihrab://prayers')document.querySelector('.mobile-bottom-nav [data-tab="tab-prayers"]')?.click();});
     App.addListener('backButton',()=>{
+      const readerConfirmation = document.getElementById('quran-reader-exit-confirmation');
+      if (readerConfirmation?.open) { readerConfirmation.close(); return; }
+      const quranReader = document.getElementById('quran-reader-dialog');
+      if (quranReader?.open) {
+        document.getElementById('quran-reader-exit').click();
+        return;
+      }
       const overlay=document.querySelector('dialog[open],:popover-open');
       if(overlay){if(overlay.matches('dialog'))overlay.close();else overlay.hidePopover();return;}
       const adhkarBack = document.getElementById('adhkar-back');

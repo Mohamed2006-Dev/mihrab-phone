@@ -1,7 +1,7 @@
 {
   "name": "mihrab-phone",
-  "version": "1.0.1",
-  "description": "تطبيق محراب للهواتف الذكية لمواقيت الصلاة والأذكار وأوراد القرآن والدروس",
+  "version": "1.0.2",
+  "description": "محراب لتنظيم الصلاة وقراءة أوراد القرآن بحفص وورش ومتابعة الأذكار والأحاديث والدروس، مع التنقل باللمس وقوالب عصرية وتقليدية.",
   "main": "src/platform/mobile-api.js",
   "scripts": {
     "prepare:web": "node scripts/prepare-web-assets.mjs",

@@ -9,7 +9,7 @@
 <link href="./styles/structural.css" rel="stylesheet"/>
 <link href="./style.css" rel="stylesheet"/>
 <link href="./styles/mobile.css" rel="stylesheet"/>
-<link rel="stylesheet" href="./release101.css"></head>
+<link rel="stylesheet" href="./release101.css"><link rel="stylesheet" href="./quran-reader.css"></head>
 <body data-navigation="dock"><div id="app-boot" role="status" aria-live="polite"><div class="boot-brand"><img class="boot-logo" src="./assets/app-icon.png" alt="" width="106" height="106"><p class="boot-name">محراب</p><p class="boot-status" id="boot-status">جارٍ تهيئة التطبيق…</p><button id="boot-retry" class="boot-retry" type="button" hidden>إعادة المحاولة</button></div><div class="boot-progress" role="progressbar" aria-label="جارٍ تحميل التطبيق"></div></div><script src="./boot.js"></script>
 <div class="app-shell" data-navigation="dock">
 <!-- Sidebar. -->
@@ -34,13 +34,42 @@
 <path d="M17 12v7a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3v-2h11v2a3 3 0 0 0 3 3M6 17V6a3 3 0 0 1 3-3h3M6 7H2V6a3 3 0 0 1 6 0"></path>
 <path class="icon-detail" d="m12 10 1-4 6-5 3 3-6 5-4 1Zm0 0-2 3m4-7 3 3"></path></svg><span>حديث اليوم والصلوات</span></button>
 <button class="nav-btn" data-tab="tab-adhkar" type="button"><svg class="ui-icon nav-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M12 19v2m-1 1h2"/><circle cx="12" cy="4" r="1.65"/><circle cx="7" cy="6" r="1.65"/><circle cx="6" cy="11" r="1.65"/><circle cx="8" cy="15" r="1.65"/><circle cx="12" cy="17" r="1.65"/><circle cx="16" cy="15" r="1.65"/><circle cx="18" cy="11" r="1.65"/><circle cx="17" cy="6" r="1.65"/></svg><span>الأذكار</span></button>
-<button class="nav-btn" data-tab="tab-youtube"><svg aria-hidden="true" class="ui-icon nav-icon" data-icon="television" fill="none" focusable="false" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" viewbox="0 0 24 24">
-<rect height="14" rx="3" width="20" x="2" y="6"></rect>
-<path d="m8 2 4 4 4-4M8 23h8"></path>
-<path class="icon-detail" d="m10 10 5 3-5 3v-6Z"></path></svg><span>الدروس والقنوات</span></button>
-<button class="nav-btn" data-tab="tab-quran"><svg aria-hidden="true" class="ui-icon nav-icon" data-icon="quran-stand" fill="none" focusable="false" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" viewbox="0 0 24 24">
-<path d="M12 5C9 2 5 2 2 3v11c4-1 7 0 10 3 3-3 6-4 10-3V3c-3-1-7-1-10 2Zm0 0v12"></path>
-<path class="icon-detail" d="m6 18 12 5M18 18 6 23M5 6l4 1M5 9l4 1m6-3 4-1m-4 4 4-1"></path></svg><span>ورد القرآن الكريم</span></button>
+<button class="nav-btn" data-tab="tab-youtube"><svg
+                aria-hidden="true"
+                class="ui-icon nav-icon"
+                data-icon="television"
+                fill="none"
+                focusable="false"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="1.6"
+                viewbox="0 0 24 24"
+              >
+                <rect height="14" rx="3" width="20" x="2" y="6"></rect>
+                <path d="m8 2 4 4 4-4M8 23h8"></path>
+                <path class="icon-detail" d="m10 10 5 3-5 3v-6Z"></path></svg
+              ><span>الدروس والقنوات</span></button>
+<button class="nav-btn" data-tab="tab-quran"><svg
+                aria-hidden="true"
+                class="ui-icon nav-icon"
+                data-icon="quran-stand"
+                fill="none"
+                focusable="false"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="1.6"
+                viewbox="0 0 24 24"
+              >
+                <path
+                  d="M12 5C9 2 5 2 2 3v11c4-1 7 0 10 3 3-3 6-4 10-3V3c-3-1-7-1-10 2Zm0 0v12"
+                ></path>
+                <path
+                  class="icon-detail"
+                  d="m6 18 12 5M18 18 6 23M5 6l4 1M5 9l4 1m6-3 4-1m-4 4 4-1"
+                ></path></svg
+              ><span>ورد القرآن الكريم</span></button>
 </nav>
 </div>
 <p class="sidebar-hint">لإخفاء القائمة الجانبية، قم بالنقر على الزر أعلاه.</p>
@@ -235,7 +264,7 @@
 </section>
 <!-- Quran tab: independent reading and memorization/revision plans. -->
 <section class="tab-section" id="tab-adhkar"><article class="card-panel">
-  <header class="card-header adhkar-header"><h2 class="card-title" id="adhkar-title">الأذكار</h2>
+  <header class="card-header adhkar-header"><nav id="adhkar-title" class="adhkar-breadcrumb" aria-label="مسار أقسام الأذكار"></nav>
   <button type="button" class="btn btn-secondary" id="adhkar-back" hidden>رجوع</button></header>
   <div id="adhkar-content"></div>
   <p class="settings-status">حصن المسلم لسعيد بن علي بن وهف القحطاني · النسخة الرقمية asellam/HisnElMuslim</p>
@@ -256,21 +285,20 @@
 </div>
 <div class="video-card">
 <div style="font-size: var(--font-size-xs); color: var(--text-muted)">الورد المحدد:</div>
-<div id="reading-current-assignment" style="
-                    font-family: var(--font-family-scripture);
-                    font-size: var(--font-size-xl);
-                    color: var(--accent-primary);
-                  ">
-                  الحزب رقم 1 </div><div class="quran-book-shell"><div class="quran-font-toolbar" role="group" aria-label="حجم خط القرآن"><button type="button" class="hadith-font-button" data-quran-font-step="2" aria-label="تكبير خط القرآن">+</button><button type="button" class="hadith-font-button" data-quran-font-step="-2" aria-label="تصغير خط القرآن">−</button></div><div aria-live="polite" class="quran-boundaries quran-book-spread" id="reading-boundaries"></div></div><div class="quran-progress"><progress id="reading-progress" max="100" value="0"></progress><span id="reading-progress-label"></span></div>
+<form novalidate class="wird-position-editor" id="reading-current-assignment">
+  <label for="reading-position-input" id="reading-position-label"></label>
+  <input id="reading-position-input" type="number" step="1" inputmode="numeric" autocomplete="off" aria-label="بداية ورد القراءة" disabled>
+  <div class="wird-surah-picker" hidden><select id="reading-position-surah" aria-label="سورة بداية الورد" disabled></select></div>
+  <output id="reading-position-end" hidden></output>
+</form><div class="quran-book-shell"><div class="quran-font-toolbar" role="group" aria-label="حجم خط القرآن"><button type="button" class="hadith-font-button" data-quran-font-step="2" aria-label="تكبير خط القرآن">+</button><button type="button" class="hadith-font-button" data-quran-font-step="-2" aria-label="تصغير خط القرآن">−</button></div><div aria-live="polite" class="quran-boundaries quran-book-spread" id="reading-boundaries"></div></div><div class="quran-progress"><div class="wird-progress-track"><div class="wird-progress-range" id="reading-progress" aria-hidden="true"></div><button type="button" class="wird-progress-mark" id="reading-progress-mark" hidden></button></div><span id="reading-progress-label"></span></div>
 <div id="reading-range-desc" style="font-size: var(--font-size-xs); color: var(--text-secondary)">
                   القرآن الكريم كاملاً
                 </div>
-<div style="display: flex; gap: var(--spacing-sm)">
+<div class="wird-actions">
 <!-- Mark this portion complete. -->
+<button type="button" class="btn btn-secondary" data-open-quran-reader="reading">اقرأ الورد</button>
 <button class="btn btn-primary" id="btn-complete-reading" style="flex: 1">
-<svg fill="none" height="15" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" style="vertical-align: middle; margin-left: 6px" viewbox="0 0 24 24" width="15">
-<polyline points="20 6 9 17 4 12"></polyline>
-</svg>
+<svg aria-hidden="true" class="ui-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4 4 10-9"/></svg>
 <span>أتممت ورد القراءة (انتقل للتالي)</span>
 </button>
 <!-- Choose another random portion. -->
@@ -299,20 +327,18 @@
 </div>
 <div class="video-card">
 <div style="font-size: var(--font-size-xs); color: var(--text-muted)">مقدار الحفظ/المراجعة الحالي المطلوب:</div>
-<div id="hifz-current-assignment" style="
-                    font-family: var(--font-family-scripture);
-                    font-size: var(--font-size-xl);
-                    color: var(--accent-secondary);
-                  ">
-                  الحزب رقم 58 </div><div class="quran-book-shell"><div class="quran-font-toolbar" role="group" aria-label="حجم خط القرآن"><button type="button" class="hadith-font-button" data-quran-font-step="2" aria-label="تكبير خط القرآن">+</button><button type="button" class="hadith-font-button" data-quran-font-step="-2" aria-label="تصغير خط القرآن">−</button></div><div aria-live="polite" class="quran-boundaries quran-book-spread" id="hifz-boundaries"></div></div><div class="quran-progress"><progress id="hifz-progress" max="100" value="0"></progress><span id="hifz-progress-label"></span></div>
+<form novalidate class="wird-position-editor" id="hifz-current-assignment">
+  <label for="hifz-position-input" id="hifz-position-label"></label>
+  <input id="hifz-position-input" type="number" step="1" inputmode="numeric" autocomplete="off" aria-label="بداية ورد الحفظ والمراجعة" disabled>
+  <div class="wird-surah-picker" hidden><select id="hifz-position-surah" aria-label="سورة بداية الورد" disabled></select></div>
+  <output id="hifz-position-end" hidden></output>
+</form><div class="quran-book-shell"><div class="quran-font-toolbar" role="group" aria-label="حجم خط القرآن"><button type="button" class="hadith-font-button" data-quran-font-step="2" aria-label="تكبير خط القرآن">+</button><button type="button" class="hadith-font-button" data-quran-font-step="-2" aria-label="تصغير خط القرآن">−</button></div><div aria-live="polite" class="quran-boundaries quran-book-spread" id="hifz-boundaries"></div></div><div class="quran-progress"><div class="wird-progress-track"><div class="wird-progress-range" id="hifz-progress" aria-hidden="true"></div><button type="button" class="wird-progress-mark" id="hifz-progress-mark" hidden></button></div><span id="hifz-progress-label"></span></div>
 <div id="hifz-range-desc" style="font-size: var(--font-size-xs); color: var(--text-secondary)">
                   نطاق الحفظ المحدد
                 </div>
-<button class="btn btn-gold" id="btn-complete-hifz"><svg aria-hidden="true" class="ui-icon" data-icon="check" fill="none" focusable="false" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" viewbox="0 0 24 24">
-<circle cx="12" cy="12" r="9"></circle>
-<path d="m8 12 3 3 5-6"></path>
-</svg>
-                  أتممت ورد الحفظ/المراجعة (انتقل للتالي)</button>
+<div class="wird-actions"><button type="button" class="btn btn-secondary" data-open-quran-reader="hifz">افتح ورد المراجعة</button>
+<button class="btn btn-primary" id="btn-complete-hifz"><svg aria-hidden="true" class="ui-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4 4 10-9"/></svg>
+                  أتممت ورد الحفظ/المراجعة (انتقل للتالي)</button></div>
 </div>
 </div></article></section>
 <!-- Application settings and prayer preparation screen. -->
@@ -392,14 +418,6 @@
 <div class="form-group">
 <label class="form-label">مقدار الحفظ/المراجعة:</label>
 <input class="input-field" id="hifz-amount" max="30" min="1" type="number" value="1"/>
-</div> </div><div class="grid-2">
-<div class="form-group">
-<label class="form-label" id="lbl-hifz-range-start">بداية نطاق الحفظ (حسب الوحدة):</label>
-<select class="select-field" id="hifz-range-start"></select>
-</div>
-<div class="form-group">
-<label class="form-label" id="lbl-hifz-range-end">نهاية نطاق الحفظ (حسب الوحدة):</label>
-<select class="select-field" id="hifz-range-end"></select>
 </div> </div></section></article>
 <div aria-labelledby="data-settings-section-appearance" class="settings-section-panel" hidden="" id="data-settings-section-panel-appearance" role="tabpanel"><div class="card-panel appearance-settings">
 <div class="card-header"><h3 class="card-title"><svg aria-hidden="true" class="ui-icon nav-icon" data-icon="palette" fill="none" focusable="false" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" viewbox="0 0 24 24">
@@ -408,7 +426,11 @@
 </svg>
                   إعدادات المظهر</h3><span class="meta-pill" id="theme-live-indicator">نشط</span></div>
 <div class="appearance-options">
-<div class="form-group"><label class="form-label" for="theme-selector">اختر أحد القوالب</label><select class="select-field" id="theme-selector"></select></div>
+<label class="appearance-family-switch">
+                  <span>المظهر العصري</span>
+                  <input id="theme-modern-enabled" role="switch" type="checkbox" />
+                </label>
+                <div class="form-group" id="modern-theme-options" hidden><label class="form-label" for="theme-selector">اختر أحد القوالب</label><select class="select-field" id="theme-selector"></select></div>
 <div class="form-group"><span class="form-label">الوضع اللوني</span><div class="mode-toggle-group">
 <button aria-pressed="true" class="mode-btn" data-color-mode="dark"><svg aria-hidden="true" class="ui-icon nav-icon" data-icon="moon" fill="none" focusable="false" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" viewbox="0 0 24 24">
 <path d="M21 13A9 9 0 0 1 11 3a9 9 0 1 0 10 10Z"></path>
@@ -546,11 +568,7 @@
 <rect class="icon-detail" height="4" rx="2" width="12" x="6" y="14"></rect></svg></span>
 <span class="control-tooltip" role="tooltip">القائمة الجانبية</span>
 </button>
-<button aria-describedby="settings-control-tooltip" aria-label="الإعدادات والقوالب" class="floating-control settings-toggle" data-tab="tab-settings" id="btn-floating-settings">
-<svg aria-hidden="true" class="ui-icon nav-icon" data-icon="settings" fill="none" focusable="false" height="18" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" style="vertical-align: middle" viewbox="0 0 24 24" width="18">
-<circle cx="12" cy="12" r="3"></circle>
-<path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg><span class="control-tooltip" id="settings-control-tooltip" role="tooltip">الإعدادات والقوالب</span>
-</button>
+
 <nav aria-label="التنقل السريع" class="floating-dock" id="floating-dock">
 <div aria-label="التبويبات" class="dock-tabs" role="group">
 <button aria-current="page" aria-label="مواقيت الصلاة" class="dock-button active" data-tab="tab-prayers"><svg aria-hidden="true" class="ui-icon nav-icon" data-icon="mihrab" fill="none" focusable="false" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" viewbox="0 0 24 24">
@@ -560,13 +578,42 @@
 <path d="M17 12v7a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3v-2h11v2a3 3 0 0 0 3 3M6 17V6a3 3 0 0 1 3-3h3M6 7H2V6a3 3 0 0 1 6 0"></path>
 <path class="icon-detail" d="m12 10 1-4 6-5 3 3-6 5-4 1Zm0 0-2 3m4-7 3 3"></path></svg><span class="control-tooltip" role="tooltip">حديث اليوم والصلوات</span></button>
 <button class="dock-button" data-tab="tab-adhkar" type="button" aria-label="الأذكار"><svg class="ui-icon nav-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M12 19v2m-1 1h2"/><circle cx="12" cy="4" r="1.65"/><circle cx="7" cy="6" r="1.65"/><circle cx="6" cy="11" r="1.65"/><circle cx="8" cy="15" r="1.65"/><circle cx="12" cy="17" r="1.65"/><circle cx="16" cy="15" r="1.65"/><circle cx="18" cy="11" r="1.65"/><circle cx="17" cy="6" r="1.65"/></svg><span class="control-tooltip" role="tooltip">الأذكار</span></button>
-<button aria-label="الدروس والقنوات" class="dock-button" data-tab="tab-youtube"><svg aria-hidden="true" class="ui-icon nav-icon" data-icon="television" fill="none" focusable="false" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" viewbox="0 0 24 24">
-<rect height="14" rx="3" width="20" x="2" y="6"></rect>
-<path d="m8 2 4 4 4-4M8 23h8"></path>
-<path class="icon-detail" d="m10 10 5 3-5 3v-6Z"></path></svg><span class="control-tooltip" role="tooltip">الدروس والقنوات</span></button>
-<button aria-label="ورد القرآن الكريم" class="dock-button" data-tab="tab-quran"><svg aria-hidden="true" class="ui-icon nav-icon" data-icon="quran-stand" fill="none" focusable="false" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" viewbox="0 0 24 24">
-<path d="M12 5C9 2 5 2 2 3v11c4-1 7 0 10 3 3-3 6-4 10-3V3c-3-1-7-1-10 2Zm0 0v12"></path>
-<path class="icon-detail" d="m6 18 12 5M18 18 6 23M5 6l4 1M5 9l4 1m6-3 4-1m-4 4 4-1"></path></svg><span class="control-tooltip" role="tooltip">ورد القرآن الكريم</span></button>
+<button aria-label="الدروس والقنوات" class="dock-button" data-tab="tab-youtube"><svg
+                aria-hidden="true"
+                class="ui-icon nav-icon"
+                data-icon="television"
+                fill="none"
+                focusable="false"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="1.6"
+                viewbox="0 0 24 24"
+              >
+                <rect height="14" rx="3" width="20" x="2" y="6"></rect>
+                <path d="m8 2 4 4 4-4M8 23h8"></path>
+                <path class="icon-detail" d="m10 10 5 3-5 3v-6Z"></path></svg
+              ><span class="control-tooltip" role="tooltip">الدروس والقنوات</span></button>
+<button aria-label="ورد القرآن الكريم" class="dock-button" data-tab="tab-quran"><svg
+                aria-hidden="true"
+                class="ui-icon nav-icon"
+                data-icon="quran-stand"
+                fill="none"
+                focusable="false"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="1.6"
+                viewbox="0 0 24 24"
+              >
+                <path
+                  d="M12 5C9 2 5 2 2 3v11c4-1 7 0 10 3 3-3 6-4 10-3V3c-3-1-7-1-10 2Zm0 0v12"
+                ></path>
+                <path
+                  class="icon-detail"
+                  d="m6 18 12 5M18 18 6 23M5 6l4 1M5 9l4 1m6-3 4-1m-4 4 4-1"
+                ></path></svg
+              ><span class="control-tooltip" role="tooltip">ورد القرآن الكريم</span></button>
 </div>
 <span aria-hidden="true" class="dock-divider"></span>
 <div aria-label="المظهر" class="dock-modes" role="group">
@@ -659,7 +706,7 @@
         </p><h4>ربط الهاتف والحاسوب</h4>
         <p class="resource-note">من الإعدادات ← ربط الأجهزة، يمكنك مشاركة القنوات والتذكيرات المخصّصة وإعدادات الأوراد وتقدّمها عبر الشبكة المحلية. ويمكن للهاتف مشاركة موقعه مع الحاسوب في الاتجاه المسموح. تبقى قياسات التخزين واستهلاك الإنترنت مستقلة لكل جهاز</p>
         <button class="btn btn-secondary" type="button" id="btn-update-highlights">ما الجديد في محراب؟</button>
-        <h3>محراب على هاتفك</h3><p>محراب يساعد على تنظيم الوقت والاستعداد للصلاة، مع المواقيت والأذان والأحاديث وأوراد القرآن والدروس. تجربة محلية هادئة وخالية من الإعلانات التجارية داخل التطبيق.</p><h4>الموقع والمواقيت</h4><p>يستخدم التطبيق موقع الجهاز بعد السماح له، ويطابق المدينة محلياً. يمكنه تحديث الموقع عند استخدام التطبيق، كل نصف ساعة وعند العودة إليه بعد انقضاء المدة. يمكن إيقاف ذلك أو اختيار المدينة والإحداثيات وطريقة الحساب يدوياً دون منح التطبيق إذن الموقع. المطابقة مع مزوّد المواقيت الرسمي تتطلب اتصالاً وتظهر نتيجتها بوضوح.</p><h4>الخصوصية والتخزين</h4><p>تُحفظ الإعدادات وتقدم الأوراد والمواد المخزنة على هاتفك. تحديد الموقع لا يعتمد على عنوان IP. تحميل مواد جديدة أو فتح فيديو أو رابط خارجي يتصل بمزوّد تلك الخدمة وتطبق سياساته الخاصة.</p><h4>العمل دون إنترنت</h4><p>يمكن حساب المواقيت وقراءة الأوراد والأحاديث والمواد المخزنة دون اتصال. تتطلب المواد الجديدة والتحقق الرسمي والمشاهدة الخارجية اتصالاً. يخضع وصول التنبيهات لصلاحيات Android وإعدادات البطارية.</p><h4>التحكم</h4><p>يمكن تخصيص إشعارات الصلوات والأوراد والدروس، وضبط الشبكة والأداء والمظهر. كبّر نص الآيات والحديث بإصبعين داخل مساحة القراءة دون تغيير حجم البطاقة.</p></section>
+        <h3>محراب على هاتفك</h3><p>محراب لتنظيم الصلاة وقراءة أوراد القرآن بحفص وورش ومتابعة الأذكار والأحاديث والدروس، مع التنقل باللمس وقوالب عصرية وتقليدية.</p><h4>الموقع والمواقيت</h4><p>يستخدم التطبيق موقع الجهاز بعد السماح له، ويطابق المدينة محلياً. يمكنه تحديث الموقع عند استخدام التطبيق، كل نصف ساعة وعند العودة إليه بعد انقضاء المدة. يمكن إيقاف ذلك أو اختيار المدينة والإحداثيات وطريقة الحساب يدوياً دون منح التطبيق إذن الموقع. المطابقة مع مزوّد المواقيت الرسمي تتطلب اتصالاً وتظهر نتيجتها بوضوح.</p><h4>الخصوصية والتخزين</h4><p>تُحفظ الإعدادات وتقدم الأوراد والمواد المخزنة على هاتفك. تحديد الموقع لا يعتمد على عنوان IP. تحميل مواد جديدة أو فتح فيديو أو رابط خارجي يتصل بمزوّد تلك الخدمة وتطبق سياساته الخاصة.</p><h4>العمل دون إنترنت</h4><p>يمكن حساب المواقيت وقراءة الأوراد والأحاديث والمواد المخزنة دون اتصال. تتطلب المواد الجديدة والتحقق الرسمي والمشاهدة الخارجية اتصالاً. يخضع وصول التنبيهات لصلاحيات Android وإعدادات البطارية.</p><h4>التحكم</h4><p>يمكن تخصيص إشعارات الصلوات والأوراد والدروس، وضبط الشبكة والأداء والمظهر. كبّر نص الآيات والحديث بإصبعين داخل مساحة القراءة دون تغيير حجم البطاقة.</p></section>
 <section aria-labelledby="data-about-section-usage" hidden="" id="data-about-section-panel-usage" role="tabpanel"><h3>إتاحة المصدر والاستخدام غير التجاري</h3><p>المصدر متاح بالكامل للدراسة والاستخدام والتعديل وإعادة النشر للاستخدام غير التجاري، مع
           احترام الضوابط الشرعية وعدم تحويل المشروع أو نسخة مشتقة منه إلى مصدر للكسب والربح.</p><p>يُمنع بيع التطبيق أو النسخ المشتقة، أو فرض اشتراك أو مقابل للوصول إليه، أو توظيفه
           للإعلانات أو تحقيق ربح من توزيعه. يجوز تغيير سياسة النسخة المشتقة بما يناسبها، بشرط
@@ -705,18 +752,46 @@
 <span>الحديث</span>
 </button>
 <button class="nav-btn mobile-nav-item" data-tab="tab-quran" type="button">
-<svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" viewbox="0 0 24 24">
-<path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
-<path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
-</svg>
+<svg
+                aria-hidden="true"
+                class="ui-icon nav-icon"
+                data-icon="quran-stand"
+                fill="none"
+                focusable="false"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="1.6"
+                viewbox="0 0 24 24"
+              >
+                <path
+                  d="M12 5C9 2 5 2 2 3v11c4-1 7 0 10 3 3-3 6-4 10-3V3c-3-1-7-1-10 2Zm0 0v12"
+                ></path>
+                <path
+                  class="icon-detail"
+                  d="m6 18 12 5M18 18 6 23M5 6l4 1M5 9l4 1m6-3 4-1m-4 4 4-1"
+                ></path></svg
+              >
 <span>القرآن</span>
 </button>
 <button class="nav-btn mobile-nav-item" data-tab="tab-adhkar" type="button"><svg class="ui-icon nav-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M12 19v2m-1 1h2"/><circle cx="12" cy="4" r="1.65"/><circle cx="7" cy="6" r="1.65"/><circle cx="6" cy="11" r="1.65"/><circle cx="8" cy="15" r="1.65"/><circle cx="12" cy="17" r="1.65"/><circle cx="16" cy="15" r="1.65"/><circle cx="18" cy="11" r="1.65"/><circle cx="17" cy="6" r="1.65"/></svg><span>الأذكار</span></button>
 <button class="nav-btn mobile-nav-item" data-tab="tab-youtube" type="button">
-<svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" viewbox="0 0 24 24">
-<rect height="14" rx="3" width="20" x="2" y="6"></rect>
-<path d="m10 10 5 3-5 3v-6Z" fill="currentColor"></path>
-</svg>
+<svg
+                aria-hidden="true"
+                class="ui-icon nav-icon"
+                data-icon="television"
+                fill="none"
+                focusable="false"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="1.6"
+                viewbox="0 0 24 24"
+              >
+                <rect height="14" rx="3" width="20" x="2" y="6"></rect>
+                <path d="m8 2 4 4 4-4M8 23h8"></path>
+                <path class="icon-detail" d="m10 10 5 3-5 3v-6Z"></path></svg
+              >
 <span>الدروس</span>
 </button>
 <button class="nav-btn mobile-nav-item" data-tab="tab-settings" type="button">
@@ -760,10 +835,14 @@
   </div>
   <p id="lesson-reminder-status" role="status"></p>
 </dialog><dialog id="update-highlights" class="location-confirm-dialog release-dialog" aria-labelledby="update-highlights-title">
-          <h3 id="update-highlights-title">ما الجديد في محراب 1.0.1؟</h3>
-          <ul><li>قسم مستقل للأذكار، مع عدّاد وحفظ تقدّم الصباح والمساء.</li>
-          <li>تذكيرات مخصّصة للحديث والذكر والدروس، يومياً أو على فترات.</li>
-          <li>دليل قنوات مصوّر وتصفية بحسب التخصص.</li><li>ربط محلي بين الهاتف والحاسوب وتحديث البيانات في الواجهة عند المزامنة.</li><li>معاينة ويدجيت المواقيت على شكل بطاقته.</li></ul>
+          <h3 id="update-highlights-title">ما الجديد من 1.0.1 إلى 1.0.2؟</h3>
+          <ul>
+            <li>مصحف للأوراد دون اتصال بحفص وورش، مع حفظ موضع الآية وإتمام ورد القراءة أو الحفظ داخل المصحف.</li>
+            <li>شريط يعرض نطاق الورد على كامل الوحدة، واختيار السورة بالاسم وتحديد البداية من البطاقة.</li>
+            <li>قوالب عصرية وتقليدية بنمطين نهاري وليلي وزخارف متمايزة.</li>
+            <li>تحسين عرض الأذكار والتكرار وإعادة الضبط، مع أيقونات جديدة ومسار تنقّل داخل الأقسام.</li>
+            <li>السحب لقلب صفحات المصحف والتنقل بين الأذكار، مع توحيد أيقونات شريط الهاتف.</li>
+          </ul>
           <form method="dialog"><button class="btn btn-primary">متابعة</button></form>
         </dialog><dialog id="custom-reminder-history" class="location-confirm-dialog release-dialog" aria-labelledby="custom-reminder-history-title">
   <header><h3 id="custom-reminder-history-title">سجل التذكيرات المخصّصة</h3><form method="dialog"><button class="btn btn-secondary">إغلاق</button></form></header>
@@ -785,6 +864,16 @@
   <img src="./assets/prayer-widget-preview.png" alt="معاينة بطاقة الويدجيت، صلاة الظهر والوقت المتبقي">
   <form method="dialog"><button type="button" id="btn-confirm-widget-preview" class="btn btn-primary">إضافة إلى الشاشة الرئيسية</button> <button class="btn btn-secondary">إلغاء</button></form>
 </dialog>
+<dialog id="adhkar-reset-dialog" class="location-confirm-dialog release-dialog" aria-labelledby="adhkar-reset-title" aria-describedby="adhkar-reset-message">
+  <form method="dialog">
+    <h3 id="adhkar-reset-title"></h3>
+    <p id="adhkar-reset-message"></p>
+    <div class="adhkar-reset-dialog-actions">
+      <button type="submit" value="cancel" class="btn btn-secondary" autofocus>إلغاء</button>
+      <button type="submit" value="reset" class="btn btn-primary">تأكيد إعادة الضبط</button>
+    </div>
+  </form>
+</dialog>
 <dialog id="adhkar-source-dialog" class="location-confirm-dialog release-dialog" aria-labelledby="adhkar-source-title">
   <header><h3 id="adhkar-source-title">مصدر الذكر</h3><form method="dialog"><button class="btn btn-secondary">إغلاق</button></form></header>
   <p id="adhkar-source-text"></p>
@@ -798,5 +887,71 @@
   <header><h3 id="sync-device-title">الأجهزة المرتبطة</h3><form method="dialog"><button class="btn btn-secondary">إغلاق</button></form></header>
   <div data-sync-devices></div><p data-sync-device-status role="status"></p>
 </dialog>
+<dialog id="quran-reader-dialog" dir="rtl" aria-labelledby="quran-reader-title">
+  <header class="quran-reader-header">
+    <div>
+      <h2 id="quran-reader-title">مصحف الورد</h2>
+      <p id="quran-reader-range"></p>
+    </div>
+    <button type="button" class="quran-reader-button" id="quran-reader-exit" autofocus>خروج</button>
+  </header>
+  <div class="quran-reader-scroll" id="quran-reader-scroll">
+    <div class="quran-reader-tools">
+      <label for="quran-reader-surah">السورة
+        <select id="quran-reader-surah" data-native-select></select>
+      </label>
+      <details id="quran-reader-settings">
+        <summary>إعدادات المصحف</summary>
+        <div class="quran-reader-settings-fields">
+          <label for="quran-reader-theme">المظهر
+            <select id="quran-reader-theme" data-native-select>
+              <option value="paper">ورق عاجي</option>
+              <option value="night">قراءة ليلية</option>
+              <option value="app">قالب التطبيق</option>
+            </select>
+          </label>
+          <label for="quran-reader-riwaya">رواية القراءة
+            <select id="quran-reader-riwaya" data-native-select>
+              <option value="hafs">حفص عن عاصم</option>
+              <option value="warsh">ورش عن نافع</option>
+            </select>
+          </label>
+          <label class="quran-reader-toggle" for="quran-reader-tajweed">
+            تلوين أحكام التجويد
+            <input id="quran-reader-tajweed" type="checkbox" role="switch" aria-describedby="quran-reader-tajweed-note">
+          </label>
+          <p id="quran-reader-tajweed-note"></p>
+        </div>
+      </details>
+    </div>
+    <p id="quran-reader-status" role="status"></p>
+    <div class="quran-reader-viewport"><div class="quran-reader-book" id="quran-reader-book"></div></div>
+  </div>
+  <button type="button" class="quran-reader-button" id="quran-reader-annotation" hidden>حفظ الموضع</button>
+  <footer class="quran-reader-footer">
+    <div id="quran-reader-legend" aria-label="دليل ألوان التجويد" hidden>
+      <div id="quran-reader-legend-rules"></div>
+    </div>
+    <p id="quran-reader-bookmark" role="status"></p>
+    <nav aria-label="صفحات الورد">
+      <button type="button" class="quran-reader-button" id="quran-reader-previous">السابق</button>
+      <span id="quran-reader-page-number" tabindex="-1"></span>
+      <button type="button" class="quran-reader-button" id="quran-reader-next">التالي</button>
+      <button type="button" class="quran-reader-button quran-reader-complete" id="quran-reader-complete" disabled><svg aria-hidden="true" class="ui-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4 4 10-9"/></svg><span></span></button>
+    </nav>
+  </footer>
+</dialog>
+<dialog class="quran-reader-confirm" id="quran-reader-exit-confirmation" dir="rtl" aria-labelledby="quran-reader-confirm-title">
+  <h3 id="quran-reader-confirm-title">حفظ موضع المتابعة؟</h3>
+  <p>يمكنك حفظ الآية التي حددتها والمتابعة منها لاحقاً، أو الخروج دون تعديل الموضع المحفوظ.</p>
+  <p id="quran-reader-exit-error" role="status"></p>
+  <div>
+    <button type="button" class="quran-reader-button" id="quran-reader-stay" autofocus>متابعة القراءة</button>
+    <button type="button" class="quran-reader-button" id="quran-reader-discard">خروج دون حفظ</button>
+    <button type="button" class="quran-reader-button quran-reader-primary" id="quran-reader-save">حفظ وخروج</button>
+  </div>
+</dialog>
+<script src="./quran-reader-model.js"></script>
+<script src="./quran-reader.js"></script>
 </body>
 </html>

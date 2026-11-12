@@ -408,8 +408,18 @@ class MihrabMobileApi {
     return this.quranEngine.getFullStatus(prayerData);
   }
 
-  async advanceQuranProgress(type) {
-    this.quranEngine.advanceWirdProgress(type);
+  async saveQuranBookmark(kind, mark, migrate) {
+    this.quranEngine.saveBookmark(kind, mark, migrate);
+    return this.getQuranStatus();
+  }
+
+  async setQuranPosition(kind, start) {
+    const message = this.quranEngine.setPosition(kind, start);
+    return { message, quranState: await this.getQuranStatus() };
+  }
+
+  async advanceQuranProgress(type, expected) {
+    this.quranEngine.advanceWirdProgress(type, expected);
     const prayerData = this.prayerEngine.calculateLocalPrayerTimes(this.getAppNow());
     return this.quranEngine.getFullStatus(prayerData);
   }
@@ -575,11 +585,11 @@ class MihrabMobileApi {
     }
 
     if (newConfig.quranWird) {
+      const merged = this.storage.deepMerge(previous.quranWird || {}, newConfig.quranWird);
       patch = {
         ...patch,
-        quranWird: this.quranEngine.validateSettings(
-          this.storage.deepMerge(previous.quranWird || {}, newConfig.quranWird),
-        ),
+        quranWird: this.quranEngine.validateSettings(fromSync ? merged :
+          this.quranEngine.convertSettings(previous.quranWird || {}, merged)),
       };
     }
 
@@ -704,7 +714,8 @@ class MihrabMobileApi {
     if(!plugin?.updatePrayerWidget)return {supported:false};
     const now=this.getAppNow(),G=require('../engines/prayer-times-engine'),config=this.storage.getConfig(),loc=this.prayerEngine.getLocation();
     const {activeTheme,activeMode,cssVariables}=this.themeEngine.getActiveThemeState();
-    const themeIndex=['emerald-sanctuary','andalusian-sand','royal-sapphire'].indexOf(activeTheme);
+    const themeIndex = ['emerald-sanctuary', 'andalusian-sand', 'royal-sapphire',
+      'copper-courtyard', 'dusk-atelier', 'classic-monochrome', 'amber-gold'].indexOf(activeTheme);
     const palette={
       background:themeIndex<0?-1:themeIndex*2+(activeMode==='dark'?1:0),
       text:cssVariables['--text-primary'],muted:cssVariables['--text-secondary'],accent:cssVariables['--accent-primary'],
@@ -734,7 +745,7 @@ class MihrabMobileApi {
   async getUpdateStatus() {
     return {
       phase: 'unsupported',
-      version: '1.0.1',
+      version: '1.0.2',
       nextVersion: null,
       percent: 0,
       lastChecked: null,

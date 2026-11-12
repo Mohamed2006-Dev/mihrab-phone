@@ -48,6 +48,8 @@ const API_METHODS = Object.freeze([
   // القرآن الكريم والأوراد
   'getQuranStatus',
   'advanceQuranProgress',
+  'saveQuranBookmark',
+  'setQuranPosition',
   'rollRandomQuranReading',
   'toggleQuranNotification',
 

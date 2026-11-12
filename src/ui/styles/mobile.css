@@ -221,9 +221,9 @@ label[for="settings-lock-mute"],
 .app-shell,.app-shell[data-navigation='sidebar']{grid-template-columns:minmax(0,1fr)!important}
 .app-shell>.main-content{padding:calc(70px + var(--safe-top)) max(12px,var(--safe-right)) calc(100px + var(--safe-bottom)) max(12px,var(--safe-left));max-width:100%;overflow-x:hidden}
 .main-content>.top-bar{width:100%!important;max-width:none;box-sizing:border-box;gap:8px;flex-wrap:wrap}
-#btn-floating-settings,#btn-project-info{width:44px!important;height:44px!important;min-width:44px;min-height:44px;position:fixed!important}
-#btn-floating-settings{top:calc(10px + var(--safe-top))!important;left:max(12px,var(--safe-left))!important;right:auto!important;bottom:auto!important}
-#btn-project-info{top:calc(10px + var(--safe-top))!important;left:calc(64px + var(--safe-left))!important;right:auto!important;bottom:auto!important}
+#btn-project-info{width:44px!important;height:44px!important;min-width:44px;min-height:44px;position:fixed!important}
+
+#btn-project-info{top:calc(10px + var(--safe-top))!important;left:max(12px,var(--safe-left))!important;right:auto!important;bottom:auto!important}
 @media(max-width:600px){.main-content .grid-2,.main-content .notice-columns{grid-template-columns:1fr}.main-content .card-panel{padding:16px}.main-content .settings-segments{width:100%!important;gap:4px}.main-content .settings-segments button{padding:9px 10px;font-size:12px}.main-content .btn{min-height:44px}.main-content .input-field,.main-content .select-field{min-height:44px;font-size:16px}.top-bar .clock-display{font-size:1rem}}
 
 .app-shell>.main-content{grid-column:1!important;grid-row:1!important;min-width:0;width:100%;box-sizing:border-box}
@@ -232,8 +232,8 @@ label[for="settings-lock-mute"],
 /* Compact Android layout; physical card dimensions remain stable during text pinch. */
 .app-shell>.main-content{padding-top:calc(60px + var(--safe-top));padding-bottom:calc(82px + var(--safe-bottom));gap:10px}
 .main-content>.top-bar{min-height:44px;padding:8px 10px}.top-bar .location-badge{min-width:0;flex:1}.top-bar #top-city-name{font-size:12px}.top-bar .clock-display{font-size:14px;white-space:nowrap}
-#btn-floating-settings,#btn-project-info{width:40px!important;height:40px!important;min-width:40px;min-height:40px}
-#btn-floating-settings{top:calc(8px + var(--safe-top))!important}#btn-project-info{top:calc(8px + var(--safe-top))!important;left:calc(60px + var(--safe-left))!important}
+#btn-project-info{width:40px!important;height:40px!important;min-width:40px;min-height:40px}
+#btn-project-info{top:calc(8px + var(--safe-top))!important;left:max(12px,var(--safe-left))!important}
 .mobile-bottom-nav{padding-top:5px;padding-bottom:calc(5px + var(--safe-bottom))}.mobile-bottom-nav .mobile-nav-item{min-height:44px;font-size:10px}.mobile-bottom-nav svg{width:21px;height:21px}
 .main-content .card-panel{padding:14px!important;min-height:0!important;aspect-ratio:auto}
 .main-content .card-title{font-size:19px}.main-content .card-header{gap:8px;margin-bottom:10px}

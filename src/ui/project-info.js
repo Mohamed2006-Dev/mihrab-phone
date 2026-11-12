@@ -23,23 +23,7 @@ function updateQuranSettingsSection() {
   for (const section of document.querySelectorAll('[data-quran-settings-kind]'))
     section.hidden = section.dataset.quranSettingsKind !== kind;
 }
-function positionProjectInfoButton() {
-  const settings = document.getElementById('btn-floating-settings'),
-    info = document.getElementById('btn-project-info');
-  if (!settings || !info) return;
-  const rect = settings.getBoundingClientRect();
-  Object.assign(info.style, {
-    left: rect.left + 'px',
-    top: rect.bottom + 10 + 'px',
-    right: 'auto',
-    bottom: 'auto',
-    width: rect.width + 'px',
-    height: rect.height + 'px',
-  });
-}
 function initializeProjectInfo() {
-  positionProjectInfoButton();
-  window.addEventListener('resize', positionProjectInfoButton);
   for (const kind of ['reading', 'hifz'])
     document.getElementById('btn-' + kind + '-notification').addEventListener('click', async () => {
       const buttons = [...document.querySelectorAll('.quran-notification-shortcut')];

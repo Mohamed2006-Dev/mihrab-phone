@@ -21,7 +21,8 @@ class ThemeEngine {
         }
       }
     }
-    const knownThemes = ['emerald-sanctuary', 'royal-sapphire', 'andalusian-sand'];
+    const knownThemes = ['emerald-sanctuary', 'royal-sapphire', 'andalusian-sand',
+      'copper-courtyard', 'dusk-atelier', 'classic-monochrome', 'amber-gold'];
     for (const id of knownThemes) {
       if (this.bundledThemes.has(id)) continue;
       try {
@@ -61,7 +62,7 @@ class ThemeEngine {
       const discoveredThemes = this.discoverAllThemes();
 
       return {
-        activeTheme: themeId,
+        activeTheme: themeData?.id || themeId,
         activeMode: mode,
         availableThemes: discoveredThemes,
         themeData,
@@ -79,6 +80,7 @@ class ThemeEngine {
       return [...this.bundledThemes.entries()].map(([id, content]) => ({
         id: content.id || id,
         name: content.name || id,
+        family: content.family === 'classic' ? 'classic' : 'modern',
         author: content.author || 'Mihrab Theme',
         fileName: `${id}.json`,
       }));
@@ -95,6 +97,7 @@ class ThemeEngine {
           return {
             id: content.id || path.basename(file, '.json'),
             name: content.name || path.basename(file, '.json'),
+            family: content.family === 'classic' ? 'classic' : 'modern',
             author: content.author || 'User Custom',
             fileName: file,
           };

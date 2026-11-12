@@ -2,13 +2,27 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import esbuild from 'esbuild';
+import projectInfo from '../src/engines/project-info-engine.js';
+
+const { sanitize, sanitizeBank } = projectInfo;
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const rootDir = path.resolve(__dirname, '..');
 const webDir = path.join(rootDir, 'web');
-const publicInfoPath = path.join(rootDir,'data/personal-data.json');
-if(!fs.existsSync(publicInfoPath))fs.copyFileSync(path.join(rootDir,'data/personal-data.example.json'),publicInfoPath);
+const paymentPath = path.resolve(rootDir, process.env.MIHRAB_PAYMENT_SOURCE || 'data/personal-data.json');
+const paymentInput = JSON.parse(fs.readFileSync(
+  process.env.MIHRAB_PAYMENT_SOURCE || fs.existsSync(paymentPath)
+    ? paymentPath : path.join(rootDir, 'data/personal-data.example.json'), 'utf8',
+).replace(/^\uFEFF/, ''));
+const payments = {
+  paypal: sanitize(paymentInput).paypal,
+  bank_account_informations: sanitizeBank(paymentInput.bank_account_informations),
+};
+if (process.env.MIHRAB_PAYMENT_SOURCE &&
+    (!payments.paypal || Object.values(payments.bank_account_informations).some(value => !value))) {
+  throw new Error('Payment information is incomplete or invalid.');
+}
 
 console.log('[prepare-web-assets] Preparing Capacitor web output at:', webDir);
 
@@ -45,7 +59,6 @@ copyRecursive(path.join(rootDir, 'src', 'engines'), path.join(webDir, 'engines')
 const allowedDataFiles = [
   'cities.json',
   'local-hadith-sharh.json',
-  'personal-data.json',
   'quran-meta-hafs.json',
   'quran-meta-warsh.json',
   'quran-metadata.json',
@@ -57,6 +70,7 @@ const allowedDataFiles = [
 
 const webDataDir = path.join(webDir, 'data');
 fs.mkdirSync(webDataDir, { recursive: true });
+fs.writeFileSync(path.join(webDataDir, 'personal-data.json'), JSON.stringify(payments), 'utf8');
 
 for (const file of allowedDataFiles) {
   const src = path.join(rootDir, 'data', file);
@@ -70,7 +84,10 @@ for (const file of allowedDataFiles) {
 copyRecursive(path.join(rootDir, 'data', 'geography'), path.join(webDataDir, 'geography'));
 
 // 6. نسخ القوالب المسموحة صراحة
-const allowedThemes = ['emerald-sanctuary.json', 'royal-sapphire.json', 'andalusian-sand.json'];
+const allowedThemes = [
+  'emerald-sanctuary.json', 'royal-sapphire.json', 'andalusian-sand.json',
+  'copper-courtyard.json', 'dusk-atelier.json', 'classic-monochrome.json', 'amber-gold.json',
+];
 const webThemesDir = path.join(webDir, 'themes');
 fs.mkdirSync(webThemesDir, { recursive: true });
 
@@ -134,7 +151,17 @@ await esbuild.build({
     'process.pid': '1',
     'process.platform': '"android"',
   },
-  plugins: [nodeShimsPlugin],
+  plugins: [nodeShimsPlugin, {
+    name: 'public-payment-info',
+    setup(build) {
+      build.onResolve({ filter: /data\/personal-data\.json$/ }, () => ({
+        path: 'payments', namespace: 'mihrab-payment-info',
+      }));
+      build.onLoad({ filter: /.*/, namespace: 'mihrab-payment-info' }, () => ({
+        contents: JSON.stringify(payments), loader: 'json',
+      }));
+    },
+  }],
   minify: false,
 });
 

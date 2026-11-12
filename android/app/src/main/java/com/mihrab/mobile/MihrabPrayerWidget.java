@@ -26,7 +26,15 @@ public class MihrabPrayerWidget extends AppWidgetProvider {
         R.drawable.prayer_widget_andalusian_light,
         R.drawable.prayer_widget_andalusian_dark,
         R.drawable.prayer_widget_royal_light,
-        R.drawable.prayer_widget_royal_dark
+        R.drawable.prayer_widget_royal_dark,
+        R.drawable.prayer_widget_copper_light,
+        R.drawable.prayer_widget_copper_dark,
+        R.drawable.prayer_widget_dusk_light,
+        R.drawable.prayer_widget_dusk_dark,
+        R.drawable.prayer_widget_classic_light,
+        R.drawable.prayer_widget_classic_dark,
+        R.drawable.prayer_widget_amber_light,
+        R.drawable.prayer_widget_amber_dark
     };
     private static final String REFRESH="com.mihrab.mobile.WIDGET_REFRESH";
     private static PendingIntent refreshIntent(Context context){

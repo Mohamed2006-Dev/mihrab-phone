@@ -1,6 +1,8 @@
 package com.mihrab.mobile;
 
 import android.app.ActivityManager;
+import android.app.usage.StorageStats;
+import android.app.usage.StorageStatsManager;
 import android.content.Context;
 import android.os.Build;
 import android.view.View;
@@ -15,12 +17,19 @@ import com.getcapacitor.annotation.CapacitorPlugin;
 
 @CapacitorPlugin(name="MihrabDevice",permissions={@com.getcapacitor.annotation.Permission(alias="location",strings={android.Manifest.permission.ACCESS_COARSE_LOCATION}),@com.getcapacitor.annotation.Permission(alias="gallery",strings={android.Manifest.permission.WRITE_EXTERNAL_STORAGE})})
 public class MihrabDevicePlugin extends Plugin {
-    @PluginMethod public void requestLocationPermission(PluginCall call){requestPermissionForAlias("location",call,"locationPermissionResult");}
+    private boolean hasGps() {
+        return getContext().getPackageManager().hasSystemFeature(android.content.pm.PackageManager.FEATURE_LOCATION_GPS);
+    }
+
+    @PluginMethod public void requestLocationPermission(PluginCall call) {
+        if (!hasGps()) { getPermissionStates(call); return; }
+        requestPermissionForAlias("location",call,"locationPermissionResult");
+    }
     @com.getcapacitor.annotation.PermissionCallback private void locationPermissionResult(PluginCall call){getPermissionStates(call);}
     @PluginMethod public void getPermissionStates(PluginCall call){
         boolean fine=androidx.core.content.ContextCompat.checkSelfPermission(getContext(),android.Manifest.permission.ACCESS_FINE_LOCATION)==android.content.pm.PackageManager.PERMISSION_GRANTED;
         boolean coarse=androidx.core.content.ContextCompat.checkSelfPermission(getContext(),android.Manifest.permission.ACCESS_COARSE_LOCATION)==android.content.pm.PackageManager.PERMISSION_GRANTED;
-        JSObject out=new JSObject();out.put("location",fine||coarse);out.put("notifications",androidx.core.app.NotificationManagerCompat.from(getContext()).areNotificationsEnabled());call.resolve(out);
+        JSObject out=new JSObject();out.put("location",hasGps() && (fine||coarse));out.put("notifications",androidx.core.app.NotificationManagerCompat.from(getContext()).areNotificationsEnabled());call.resolve(out);
     }
     @PluginMethod public void openNotificationSettings(PluginCall call){
         android.content.Intent intent;if(android.os.Build.VERSION.SDK_INT>=26){intent=new android.content.Intent(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS);intent.putExtra(android.provider.Settings.EXTRA_APP_PACKAGE,getContext().getPackageName());}else{intent=new android.content.Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,android.net.Uri.parse("package:"+getContext().getPackageName()));}getActivity().startActivity(intent);call.resolve();
@@ -82,6 +91,13 @@ public class MihrabDevicePlugin extends Plugin {
         result.put("logicalCores",Runtime.getRuntime().availableProcessors());
         result.put("cpuMHz",0);
         result.put("source","android");
+        JSObject capabilities = new JSObject();
+        capabilities.put("rearCamera", getContext().getPackageManager()
+            .hasSystemFeature(android.content.pm.PackageManager.FEATURE_CAMERA));
+        capabilities.put("gps", hasGps());
+        capabilities.put("notifications", getContext().getSystemService(Context.NOTIFICATION_SERVICE) != null);
+        result.put("capabilities", capabilities);
+        result.put("osVersion", "Android " + Build.VERSION.RELEASE);
         View view=getBridge().getWebView();
         WindowInsetsCompat insets=ViewCompat.getRootWindowInsets(view);
         if(insets!=null){
@@ -99,7 +115,57 @@ public class MihrabDevicePlugin extends Plugin {
         if(file.isFile())return file.length();
         long total=0;java.io.File[] children=file.listFiles();if(children!=null)for(java.io.File child:children)total+=bytes(child,root);return total;
     }
-    @PluginMethod public void getStorageStats(PluginCall call){
+    @PluginMethod public void getPowerState(PluginCall call) {
+        android.os.PowerManager manager = getContext().getSystemService(android.os.PowerManager.class);
+        android.os.BatteryManager battery = getContext().getSystemService(android.os.BatteryManager.class);
+        JSObject result = new JSObject();
+        result.put("powerSaver", manager != null && manager.isPowerSaveMode());
+        if (battery != null) {
+            int level = battery.getIntProperty(android.os.BatteryManager.BATTERY_PROPERTY_CAPACITY);
+            if (level >= 0 && level <= 100) result.put("lowBattery", level <= 20 && !battery.isCharging());
+        }
+        call.resolve(result);
+    }
+
+    @PluginMethod public void getStorageStats(PluginCall call) {
+        new Thread(() -> measureStorage(call), "mihrab-storage").start();
+    }
+
+    private void measureStorage(PluginCall call) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            try {
+                Context context = getContext();
+                StorageStatsManager manager = context.getSystemService(StorageStatsManager.class);
+                StorageStats stats = manager.queryStatsForPackage(
+                    context.getApplicationInfo().storageUuid,
+                    context.getPackageName(),
+                    android.os.Process.myUserHandle()
+                );
+                long data = stats.getDataBytes();
+                long cache = Math.min(data, stats.getCacheBytes());
+                resolveStorage(call, stats.getAppBytes(), data - cache, cache, true);
+                return;
+            } catch (Exception error) {
+                android.util.Log.w("MihrabDevice", "System storage statistics unavailable", error);
+            }
+        }
+        measurePrivateFiles(call);
+    }
+
+    private void resolveStorage(PluginCall call, long application, long data, long cache, boolean system) {
+        JSObject disk = new JSObject();
+        disk.put("application", application);
+        disk.put("data", data);
+        disk.put("profile", cache);
+        disk.put("total", application + data + cache);
+        JSObject result = new JSObject();
+        result.put("disk", disk);
+        result.put("system", system);
+        result.put("memory", android.os.Debug.getPss() * 1024L);
+        call.resolve(result);
+    }
+
+    private void measurePrivateFiles(PluginCall call) {
         try{
             android.content.pm.ApplicationInfo info=getContext().getApplicationInfo();
             long application=new java.io.File(info.sourceDir).length();
@@ -108,8 +174,7 @@ public class MihrabDevicePlugin extends Plugin {
             java.io.File[] children=root.listFiles();if(children!=null)for(java.io.File child:children)all+=bytes(child,canonical);
             long cache=bytes(getContext().getCacheDir(),canonical)+bytes(getContext().getCodeCacheDir(),canonical);
             if(info.nativeLibraryDir!=null){java.io.File lib=new java.io.File(info.nativeLibraryDir);String base=lib.getCanonicalPath();java.io.File[] libs=lib.listFiles();if(libs!=null)for(java.io.File f:libs)application+=bytes(f,base);}
-            JSObject disk=new JSObject();disk.put("application",application);disk.put("data",Math.max(0,all-cache));disk.put("profile",cache);disk.put("total",application+all);
-            JSObject result=new JSObject();result.put("disk",disk);result.put("memory",android.os.Debug.getPss()*1024L);call.resolve(result);
+            resolveStorage(call, application, Math.max(0, all - cache), Math.min(all, cache), false);
         }catch(Exception error){call.reject("تعذر قياس ملفات التطبيق",error);}
     }
     @PluginMethod public void getNetworkStats(PluginCall call){

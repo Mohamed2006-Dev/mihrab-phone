@@ -112,8 +112,10 @@ if (typeof window !== 'undefined') {
     window.MihrabLocalSync={
       syncStatus:()=>sync.status(),syncPair:(raw,direction,groups)=>sync.pair(raw,direction,groups),
       syncFinish:()=>sync.finish(),syncCancel:()=>sync.cancel(),syncUnlink:id=>sync.unlink(id),syncDropLocation:id=>sync.dropLocation(id),
+      onSyncConflicts:callback=>api.events.on("app:sync-conflicts",callback),
+      onSyncCompatibilityChanged:callback=>api.events.on("app:sync-compatibility-changed",callback),
       onSyncLinkRevoked:callback=>api.events.on("app:sync-link-revoked",callback),
-      syncNow:()=>sync.tick(),syncConfigure:(id,direction,groups)=>sync.configure(id,direction,groups),syncSetAutomatic:enabled=>sync.setAutoSync(enabled),syncCameraPermission:()=>syncNative.cameraPermission(),
+      syncNow:(options)=>sync.tick(options),syncConfigure:(id,direction,groups)=>sync.configure(id,direction,groups),syncSetAutomatic:enabled=>sync.setAutoSync(enabled),syncCameraPermission:()=>syncNative.cameraPermission(),
     };
     window.MihrabBoot?.whenReady.then(tick);
     App.addListener('resume',tick);

@@ -89,10 +89,12 @@ class MobileNotifications {
   }
 
   async snoozeLesson(video) {
+    const locale = typeof window !== 'undefined' ? window.mihrabLocale : null;
+    await locale?.ready;
     if (!this.plugin || !(await this.checkPermission())) throw new Error('إذن الإشعارات غير متاح.');
     await this.plugin.schedule({ notifications: [{
       id: 17010101,
-      title: 'تذكير بالدرس',
+      title: locale?.localize('تذكير بالدرس') ?? 'تذكير بالدرس',
       body: video.title,
       channelId: 'mihrab-visible-v2',
       schedule: { at: new Date(Date.now() + 5 * 60000) },
@@ -117,14 +119,17 @@ class MobileNotifications {
   }
 
   async schedulePrayerAlarms(prayerData, config, quranState, recommendation = null, customDays = [], appNow = new Date()) {
+    const locale = typeof window !== 'undefined' ? window.mihrabLocale : null;
+    await locale?.ready;
+    const localize = locale?.localize ?? (text => text);
     if (!prayerData || (!prayerData.prayers && !prayerData.schedule)) return { scheduledCount: 0 };
     if(this.plugin){
       let permission=await this.plugin.checkPermissions();
       
       if(permission.display!=='granted'){await this.cancelAll();return {scheduledCount:0,permissionDenied:true};}
       if(this.plugin.createChannel){
-        await this.plugin.createChannel({id:'mihrab-adhan-v2',name:'الأذان',importance:4,sound:'adhan.flac'});
-        await this.plugin.createChannel({id:'mihrab-visible-v2',name:'تذكيرات محراب',importance:4,vibration:true});
+        await this.plugin.createChannel({id:'mihrab-adhan-v2',name:localize('الأذان'),importance:4,sound:'adhan.flac'});
+        await this.plugin.createChannel({id:'mihrab-visible-v2',name:localize('تذكيرات محراب'),importance:4,vibration:true});
       }
     }
     await this.cancelAll({ keepLessonSnooze: config?.notifications?.lessons?.enabled !== false });
@@ -230,18 +235,27 @@ class MobileNotifications {
           ? { type: 'lesson', tabId: item.tabId, videoId: recommendation.videoId } : { tabId: item.tabId },
       });
     }
-    if (this.plugin && notificationsToSchedule.length > 0) {
+    const unique = [...new Map(notificationsToSchedule.map(item => [item.id, item])).values()];
+    if (this.plugin && unique.length > 0) {
       try {
-        await this.plugin.schedule({ notifications: notificationsToSchedule });
+        await this.plugin.schedule({ notifications: unique.map(item => ({
+          ...item,
+          title: localize(item.title),
+          body: item.extra?.type === 'lesson' ? item.body : localize(item.body),
+        })) });
       } catch (err) {
         throw new Error('تعذرت جدولة إشعارات الهاتف: '+err.message);
       }
     }
 
-    return { scheduledCount: this.plugin?notificationsToSchedule.length:0, plannedCount: notificationsToSchedule.length, native:Boolean(this.plugin) };
+    return { scheduledCount: this.plugin?unique.length:0, plannedCount: unique.length, native:Boolean(this.plugin) };
   }
 
   async triggerImmediate(title, body, extra = {}) {
+    const locale = typeof window !== 'undefined' ? window.mihrabLocale : null;
+    await locale?.ready;
+    title = locale?.localize(title) ?? title;
+    if (extra.type !== 'lesson') body = locale?.localize(body) ?? body;
     if (this.plugin) {
       try {
         const id = Math.floor(Math.random() * 1000000);

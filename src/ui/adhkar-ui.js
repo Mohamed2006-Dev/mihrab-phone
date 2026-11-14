@@ -101,11 +101,13 @@ const adhkarChapterIcons = {
 
 
 // Follow the finger after a small axis lock, leaving vertical scrolling to the browser.
-function bindReadingSwipe(surface, { getPanel, canTurn, turn }) {
+function bindReadingSwipe(surface, { getPanel, canTurn, turn, preview, preparePreview }) {
   let drag;
   let settling = false;
+  let paintFrame = 0;
   let suppressClick = false;
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
+  const animateDrag = () => !reducedMotion.matches && !(surface.id === 'adhkar-content' && document.documentElement.dataset.performance === 'eco');
   const offset = x => 'translate3d(' + x + 'px, 0, 0)';
 
   surface.addEventListener('pointerdown', event => {
@@ -128,36 +130,67 @@ function bindReadingSwipe(surface, { getPanel, canTurn, turn }) {
       if (Math.abs(x) < 7 || Math.abs(x) < Math.abs(y) * 1.25 ||
           window.getSelection()?.type === 'Range') return;
       drag.locked = true;
+      surface.classList.add('reading-swipe-active');
+      if (animateDrag()) drag.panel.style.willChange = 'transform';
       suppressClick = true;
       surface.setPointerCapture(event.pointerId);
     }
-    const available = canTurn(x > 0 ? 1 : -1);
+    const direction = x > 0 ? 1 : -1;
+    const available = x !== 0 && canTurn(direction);
+    if (drag.direction !== direction) {
+      const distance = Math.sign(x) * Math.min(drag.width, Math.abs(x));
+      drag.neighbor?.remove();
+      drag.direction = direction;
+      drag.neighbor = available && animateDrag() ? preview(direction) : null;
+      if (drag.neighbor) {
+        drag.neighbor.style.transform = offset(distance - direction * drag.width);
+        drag.neighbor.inert = true;
+        drag.neighbor.setAttribute('aria-hidden', 'true');
+        drag.neighbor.classList.add('reading-swipe-neighbor');
+        drag.panel.after(drag.neighbor);
+        preparePreview?.(drag.neighbor);
+      }
+    }
     drag.distance = Math.sign(x) * Math.min(drag.width, Math.abs(x) * (available ? 1 : .24));
-    if (!reducedMotion.matches) drag.panel.style.transform = offset(drag.distance);
+    if (!paintFrame && animateDrag()) paintFrame = requestAnimationFrame(() => {
+      paintFrame = 0;
+      if (!drag) return;
+      drag.panel.style.transform = offset(drag.distance);
+      if (drag.neighbor) drag.neighbor.style.transform = offset(drag.distance - drag.direction * drag.width);
+    });
   });
 
   async function finish(event, cancelled) {
     if (!drag || drag.id !== event.pointerId) return;
-    const { panel, width, distance, locked } = drag;
+    const { panel, width, distance, locked, neighbor } = drag;
     drag = null;
     if (!locked) return;
     const direction = distance > 0 ? 1 : -1;
-    const commit = !cancelled && Math.abs(distance) >= width * .24 && canTurn(direction);
+    const commit = !cancelled && Math.abs(distance) >= Math.min(64, width * .16) && canTurn(direction);
     settling = true;
+    cancelAnimationFrame(paintFrame);
+    paintFrame = 0;
+    const duration = document.documentElement.dataset.performance === 'eco' ? 90 : 180;
     const animate = async (node, from, to, duration) => {
-      if (!node || reducedMotion.matches) return;
+      if (!node || !animateDrag()) return;
       await node.animate([{ transform: offset(from) }, { transform: offset(to) }],
         { duration, easing: 'cubic-bezier(.2,.65,.3,1)' }).finished.catch(() => {});
     };
     try {
-      await animate(panel, distance, commit ? direction * width : 0, commit ? 140 : 180);
+      const end = commit ? direction * width : 0;
+      await Promise.all([
+        animate(panel, distance, end, duration),
+        animate(neighbor, distance - direction * width, end - direction * width, duration),
+      ]);
       panel.style.removeProperty('transform');
       if (commit && panel.isConnected && canTurn(direction)) {
-        turn(direction);
-        await animate(getPanel(), -direction * width, 0, 180);
+        turn(direction, neighbor);
       }
     } finally {
+      neighbor?.remove();
       panel.style.removeProperty('transform');
+      panel.style.removeProperty('will-change');
+      surface.classList.remove('reading-swipe-active');
       settling = false;
     }
   }
@@ -209,6 +242,7 @@ function renderAdhkarText(value) {
 }
 
 function bindAdhkar() {
+  const economy = () => document.documentElement.dataset.performance === 'eco';
   const host = document.getElementById('adhkar-content');
   const back = document.getElementById('adhkar-back');
   const title = document.getElementById('adhkar-title');
@@ -293,9 +327,11 @@ function bindAdhkar() {
     for (const row of rows) {
       const card = button(row.title, () => select(row), 'adhkar-category');
       card.dataset.weight = row.weight || 'regular';
-      const key = adhkarChapterIcons[row.id] || adhkarCategoryIcons[row.chapters?.[0]] || row.icon;
-      const icon = adhkarIcons[key] || adhkarIcons.other;
-      card.insertAdjacentHTML('afterbegin', '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">' + icon + '</svg>');
+      if (!economy()) {
+  const key = adhkarChapterIcons[row.id] || adhkarCategoryIcons[row.chapters?.[0]] || row.icon;
+        const icon = adhkarIcons[key] || adhkarIcons.other;
+        card.insertAdjacentHTML('afterbegin', '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">' + icon + '</svg>');
+      }
       grid.append(card);
     }
     host.append(grid);
@@ -326,12 +362,12 @@ function bindAdhkar() {
     const focus = focusCounter ? incoming.querySelector('.adhkar-counter:not(:disabled)') : null;
     (focus || incoming).focus({ preventScroll: true });
     if (incoming.getBoundingClientRect().top < 0) incoming.scrollIntoView({ block: 'start' });
-    if (dragged || !outgoing || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if (economy() || dragged || !outgoing || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     outgoing.inert = true;
     outgoing.setAttribute('aria-hidden', 'true');
     outgoing.classList.add('adhkar-reading-card--outgoing');
     host.prepend(outgoing);
-    const sign = delta > 0 ? 1 : -1;
+    const sign = (delta > 0 ? 1 : -1) * (document.documentElement.dir === 'ltr' ? -1 : 1);
     const timing = { duration: 460, easing: 'cubic-bezier(.22,.72,.26,1)' };
     outgoing.animate([
       { transform: 'none', opacity: 1 },
@@ -474,10 +510,14 @@ function bindAdhkar() {
       });
       return;
     }
-    const entry = chapter.entries[index];
+    host.append(readingCard(index));
+  }
+
+  function readingCard(cardIndex) {
+    const entry = chapter.entries[cardIndex];
     const position = document.createElement('p');
     position.className = 'meta-pill';
-    position.textContent = `الذكر ${index + 1} من ${chapter.entries.length}`;
+    position.textContent = `الذكر ${cardIndex + 1} من ${chapter.entries.length}`;
     const text = renderAdhkarText(entry.Text);
     const reference = document.createElement('a');
     reference.className = 'adhkar-source-link';
@@ -509,15 +549,16 @@ function bindAdhkar() {
     const resetCurrent = button('', () => confirmReset(false), 'btn btn-secondary adhkar-reset-current');
     resetCurrent.setAttribute('aria-label', 'إعادة ضبط هذا الذكر');
     resetCurrent.title = 'إعادة ضبط هذا الذكر';
-    resetCurrent.insertAdjacentHTML('afterbegin', resetIcon);
+    if (economy()) resetCurrent.textContent = '↺';
+    else resetCurrent.insertAdjacentHTML('afterbegin', resetIcon);
     const resetChapter = button('إعادة ضبط التقدم', () => confirmReset(true), 'btn btn-secondary adhkar-reset-chapter');
-    resetChapter.insertAdjacentHTML('afterbegin', resetIcon);
+    if (!economy()) resetChapter.insertAdjacentHTML('afterbegin', resetIcon);
     const counterRow = document.createElement('div');
     counterRow.className = 'adhkar-counter-row';
     counterRow.append(counter, resetCurrent);
 
     function updateControls() {
-      const remaining = counts[index];
+      const remaining = counts[cardIndex];
       const done = entry.Count - remaining;
       counter.textContent = remaining === 0 ? 'اكتمل الذكر' :
         remaining === 1 ? 'متبقي تكرار واحد' :
@@ -525,7 +566,7 @@ function bindAdhkar() {
         remaining <= 10 ? `متبقي ${remaining} تكرارات` : `متبقي ${remaining} تكرارًا`;
       counter.disabled = remaining === 0;
       counter.style.setProperty('--adhkar-progress', (entry.Count ? done / entry.Count : 0) * 100 + '%');
-      counter.setAttribute('aria-label', counter.textContent + '، التكرارات المكتملة ' + done + ' من ' + entry.Count);
+      counter.setAttribute('aria-label', `التكرارات المكتملة ${done} من ${entry.Count}`);
       resetCurrent.hidden = done === 0;
       resetChapter.hidden = !chapter.entries.some((item, i) => counts[i] < item.Count);
     }
@@ -551,13 +592,14 @@ function bindAdhkar() {
       card.append(position, text, controls, sourceLine);
     }
     updateControls();
-    host.append(card);
+    return card;
   }
   bindReadingSwipe(host, {
     getPanel: () => host.querySelector('.adhkar-reading-card:not(.adhkar-reading-card--outgoing)'),
     canTurn: direction => chapter && !sourceDialog.open && !resetDialog.open &&
       index + direction >= 0 && index + direction < chapter.entries.length,
     turn: direction => move(direction, false, true),
+    preview: direction => readingCard(index + direction),
   });
   back.addEventListener('click', goBack);
   const chapterId = progress.chapterId;
@@ -586,5 +628,9 @@ function bindAdhkar() {
     saveProgress();
     render();
   };
+  window.addEventListener('mihrab:performance-profile', () => {
+    for (const animation of host.getAnimations({ subtree: true })) animation.cancel();
+    render();
+  });
   render();
 }

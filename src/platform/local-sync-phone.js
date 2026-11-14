@@ -2,15 +2,23 @@
 const Contract=require('../engines/local-sync-contract');
 const id=()=>Array.from(crypto.getRandomValues(new Uint8Array(24)),byte=>byte.toString(16).padStart(2,'0')).join('');
 
+function protocolMismatch(){
+  const error=Error('أُوقفت المزامنة بسبب عدم توافق إصدار البروتوكول. حدّث محراب على الهاتف والحاسوب ثم أعد المحاولة.');
+  error.code='protocol_version';
+  error.status=409;
+  return error;
+}
+
 class MobileLocalSync {
-  constructor(api, native){this.api=api;this.native=native;this.running=false;this.ready=this.load();}
+  constructor(api, native){this.api=api;this.native=native;this.running=false;this.incompatiblePeers=new Set();this.ready=this.load();}
   async load(){
     const result=await this.native.loadState();
     this.state=result.state?JSON.parse(result.state):{phoneId:id(),links:[]};
     await this.persist();
+    this.recoveredStore=result.recovered===true;
   }
   persist(){return this.native.saveState({state:JSON.stringify(this.state)});}
-  async status(){await this.ready;return {autoSync:this.state.autoSync!==false,links:this.state.links.map(({host,link,last,conflicts})=>({host,link:{...link,token:undefined},last,conflicts})),candidate:this.candidate?.code};}
+  async status(){await this.ready;return {recoveredStore:this.recoveredStore===true,autoSync:this.state.autoSync!==false,links:this.state.links.map(({host,link,last,conflicts,details})=>({host,link:{...link,token:undefined},last,conflicts,details,protocolMismatch:this.incompatiblePeers.has(link.desktopId)})),candidate:this.candidate?.code};}
   async setAutoSync(enabled){
     await this.ready;
     if(typeof enabled!=='boolean')throw Error('قيمة المزامنة التلقائية غير صالحة.');
@@ -23,21 +31,25 @@ class MobileLocalSync {
   }
   async request(peer,route,body){
     const result=await this.native.exchange({host:peer.host,pin:peer.pin,token:peer.link?.token,
-      route,body:JSON.stringify({version:1,...body})});
+      route,body:JSON.stringify({...body,version:Contract.LINK_VERSION,protocolVersion:Contract.PROTOCOL_VERSION})});
+    let reply;
+    try{reply=JSON.parse(result.body);}catch{ /* Unreadable replies cannot establish compatibility. */ }
+    if(reply?.error==='protocol_version'||
+      (route==='/exchange'||route==='/status'&&result.status===200)&&reply?.protocolVersion!==Contract.PROTOCOL_VERSION)
+      throw protocolMismatch();
     if(result.status!==200){
       const error=Error(result.status===403?'انتهى الرمز أو أُلغي الربط.':'رفض الحاسوب طلب المزامنة.');
       error.status=result.status;
-      try{error.code=JSON.parse(result.body).error;}
-      catch{ /* Missing or malformed replies cannot confirm revocation. */ }
+      error.code=reply?.error;
       throw error;
     }
-    return JSON.parse(result.body);
+    return reply;
   }
   async pair(raw,direction,groups){
     await this.ready;
     if(this.candidate&&this.candidate.until>Date.now())throw Error('أكمل طلب الربط الحالي أو ألغِه.');
     const offer=JSON.parse(raw);
-    if(offer.version!==1||offer.port!==17777||!Contract.ID.test(offer.desktopId||'')||
+    if(offer.version!==Contract.LINK_VERSION||offer.port!==17777||!Contract.ID.test(offer.desktopId||'')||
       !/^[0-9a-f]{64}$/.test(offer.pin||'')||!/^[\w-]{43}$/.test(offer.invitation||''))
       throw Error('هذا الرمز ليس دعوة ربط من محراب.');
     Contract.validateLink({phoneId:this.state.phoneId,desktopId:offer.desktopId,direction,groups});
@@ -92,6 +104,9 @@ class MobileLocalSync {
       const result=await this.request(peer,'/configure',{previous,direction,groups});
       if(!Contract.same(result,{direction,groups}))throw Error('رد إعدادات غير صالح.');
       peer.link={...peer.link,...result};
+      delete peer.outbox;
+      delete peer.applied;
+      delete peer.details;
       await this.persist();
     } finally {this.running=false;}
     return this.tick({automatic:true});
@@ -118,61 +133,109 @@ class MobileLocalSync {
     if(!peer)return this.status();
     this.running=true;
     try{
-      try{await this.request(peer,'/unlink',{});}catch(error){if(error.status!==403||error.code!=='unpaired')throw Error('أعد الاتصال بالحاسوب لفك الربط من الهاتف، أو افصله أولاً على الحاسوب.');}
-      this.state.links=this.state.links.filter(item=>item!==peer);
-      await this.persist();
+      const previous=this.state;
+      this.state={...previous,links:previous.links.filter(item=>item!==peer),
+        pendingUnlinks:[...(previous.pendingUnlinks||[]),{host:peer.host,pin:peer.pin,link:peer.link}]};
+      try{await this.persist();}
+      catch(error){this.state=previous;throw error;}
+      this.incompatiblePeers.delete(desktopId);
+      await this.flushUnlinks();
       return this.status();
     }finally{this.running=false;}
   }
-  async tick({automatic=false,statusOnly=false}={}){
+  async flushUnlinks(){
+    for(const peer of this.state.pendingUnlinks||[]){
+      try{await this.request(peer,'/unlink',{});}
+      catch(error){if(error.status!==403||error.code!=='unpaired')continue;}
+      const previous=this.state.pendingUnlinks;
+      this.state.pendingUnlinks=previous.filter(item=>item!==peer);
+      try{await this.persist();}
+      catch{this.state.pendingUnlinks=previous;}
+    }
+  }
+  configForSync(){
+    const config=this.api.storage.getConfig();
+    return this.api.sharedSettings ? {...config,sharedSettings:this.api.sharedSettings()} : config;
+  }
+  async tick({automatic=false,statusOnly=false,desktopId,resolution}={}){
     await this.ready;
-    if(this.running||!this.state.links.length)return this.status();
+    if(resolution){
+      const peer=this.state.links.find(item=>item.link.desktopId===desktopId);
+      if(peer){peer.resolution=resolution;await this.persist();}
+    }
+    if(this.running||(!this.state.links.length&&!this.state.pendingUnlinks?.length))return this.status();
     this.running=true;
     try{
+      if(!statusOnly)await this.flushUnlinks();
       const revoked=[];
+      let compatibilityChanged=false;
       for(const peer of this.state.links){
+        if(desktopId&&peer.link.desktopId!==desktopId)continue;
         try{
-          if(statusOnly){
-            await this.request(peer,'/status',{});
-            continue;
-          }
-          const config=this.api.storage.getConfig();
+          // Verify the pinned peer before sending an outbox or reading local data.
+          await this.request(peer,'/status',{});
+          compatibilityChanged=this.incompatiblePeers.delete(peer.link.desktopId)||compatibilityChanged;
+          if(statusOnly)continue;
+          const config=this.configForSync();
           const shareLocation=Contract.locationAllowed(peer.link);
-          const scope=automatic&&this.state.autoSync===false?'location':'all';
+          const scope=!peer.resolution&&automatic&&this.state.autoSync===false?'location':'all';
           const selected=scope==='location'?(shareLocation?['location']:[]):
             peer.link.groups.filter(group=>group!=='location'||shareLocation);
-          if(!selected.length){
-            await this.request(peer,'/status',{});
-            continue;
-          }
+          if(!selected.length)continue;
           const system=shareLocation?await window.MihrabNative.DeviceInfo.getPermissionStates():null;
           const groups={};
           for(const group of selected)
             groups[group]=group==='location'?Contract.phoneLocation({...config,location:{...this.api.prayerEngine.getLocation(),source:config.location?.source||(config.location?.autoDetect===false?'manual':null)}},Boolean(system?.location)):Contract.project(config,group);
-          if(scope==='location'&&!groups.location){
-            await this.request(peer,'/status',{});
-            continue;
+          if(scope==='location'&&!groups.location)continue;
+          if(peer.outbox&&(peer.outbox.protocolVersion!==Contract.PROTOCOL_VERSION||
+            peer.outbox.groups.location&&!shareLocation))delete peer.outbox;
+          if(!peer.outbox){
+            peer.outbox={protocolVersion:Contract.PROTOCOL_VERSION,sequence:++peer.sequence,scope,groups,clocks:Object.fromEntries(selected.filter(group=>config.syncClocks?.[group]).map(group=>[group,config.syncClocks[group]])),applied:peer.applied||{},...(peer.resolution?{resolution:peer.resolution}:{})};
+            try{await this.persist();}
+            catch(error){delete peer.outbox;throw error;}
           }
-          const sequence=++peer.sequence;
-          await this.persist();
-          const result=await this.request(peer,'/exchange',{sequence,scope,groups});
+          const sent=peer.outbox;
+          const sequence=sent.sequence;
+          const result=await this.request(peer,'/exchange',sent);
           if(result.ack!==sequence)throw Error('wrong_ack');
           const patch={};
           for(const [group,value] of Object.entries(result.changes||{})){
-            if(scope==='location'||!selected.includes(group)||group==='location')throw Error('unauthorized_change');
-            if(!Contract.same(Contract.project(this.api.storage.getConfig(),group),groups[group])){
+            if(sent.scope==='location'||!Object.hasOwn(sent.groups,group)||!peer.link.groups.includes(group)||group==='location')throw Error('unauthorized_change');
+            const current=Contract.project(this.configForSync(),group);
+            if(Contract.same(current,value)){
+              (peer.applied||={})[group]=sequence;
+              continue;
+            }
+            if(!Contract.same(current,sent.groups[group])){
               (result.conflicts||=[]).push(group);continue;
             }
             Object.assign(patch,Contract.patch(group,value));
           }
-          if(Object.keys(patch).length)await this.api.saveSettings(patch,true);
+          if(Object.keys(patch).length){
+            await this.api.saveSettings(patch,true);
+            for(const [group,value] of Object.entries(result.changes||{})){
+              if(Contract.same(Contract.project(this.configForSync(),group),value))
+                (peer.applied||={})[group]=sequence;
+            }
+          }
+          delete peer.outbox;
+          if(sent.resolution&&Contract.same(peer.resolution,sent.resolution))delete peer.resolution;
           peer.last=Date.now();
-          if(scope==='all')peer.conflicts=result.conflicts||[];
+          if(sent.scope==='all'){
+            peer.conflicts=[...new Set(result.conflicts||[])];
+            peer.details=result.details||[];
+          }
         }catch(error){
           if(error.status===403&&error.code==='unpaired')revoked.push(peer);
-          else peer.last=null;
+          else if(error.code==='protocol_version'){
+            if(!this.incompatiblePeers.has(peer.link.desktopId)){
+              this.incompatiblePeers.add(peer.link.desktopId);
+              compatibilityChanged=true;
+            }
+          }else peer.last=null;
         }
       }
+      if(compatibilityChanged)this.api.events.emit('app:sync-compatibility-changed',await this.status());
       const previous=this.state.links;
       if(statusOnly&&!revoked.length)return this.status();
       if(revoked.length)this.state.links=previous.filter(peer=>!revoked.includes(peer));
@@ -180,7 +243,9 @@ class MobileLocalSync {
       catch(error){this.state.links=previous;throw error;}
       if(revoked.length)this.api.events.emit('app:sync-link-revoked');
     }finally{this.running=false;}
-    return this.status();
+    const state=await this.status();
+    if(!statusOnly)this.api.events.emit('app:sync-conflicts',state);
+    return state;
   }
 }
 module.exports=MobileLocalSync;

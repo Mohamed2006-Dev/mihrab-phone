@@ -227,7 +227,7 @@
 .adhkar-header #adhkar-back { flex: none; }
 .adhkar-header #adhkar-back[hidden], .adhkar-breadcrumb li[hidden] { display: none; }
 .adhkar-breadcrumb {
-  flex: 1; min-inline-size: 0; position: relative; direction: rtl;
+  flex: 1; min-inline-size: 0; position: relative; direction: inherit;
   font-size: clamp(.82rem, .7rem + .55vw, 1.12rem);
 }
 .adhkar-breadcrumb ol {
@@ -240,6 +240,8 @@
   margin-inline: .45em; border: solid var(--text-muted); border-width: 0 0 1px 1px;
   rotate: 45deg;
 }
+.adhkar-breadcrumb:dir(rtl) li:not(:last-child)::after { rotate: -135deg; }
+.adhkar-breadcrumb:dir(ltr) li:not(:last-child)::after { rotate: 45deg; }
 .adhkar-breadcrumb .adhkar-crumb-current {
   display: block; min-inline-size: 0; flex: 0 1 auto;
   overflow: hidden; text-overflow: ellipsis; font-weight: 700;
@@ -261,3 +263,12 @@
 
 .adhkar-reading-card { touch-action: pan-y pinch-zoom; }
 .adhkar-swipe-hint { margin-inline-start: .6em; font-size: .8rem; color: var(--text-muted); }
+
+.reading-swipe-neighbor {
+  position: absolute;
+  inset: 0 0 auto;
+  width: 100%;
+  box-sizing: border-box;
+  pointer-events: none;
+}
+.quran-reader-book.reading-swipe-neighbor { height: 100%; }

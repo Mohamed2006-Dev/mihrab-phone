@@ -1,11 +1,14 @@
 {
   "name": "mihrab-phone",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "محراب لتنظيم الصلاة وقراءة أوراد القرآن بحفص وورش ومتابعة الأذكار والأحاديث والدروس، مع التنقل باللمس وقوالب عصرية وتقليدية.",
   "main": "src/platform/mobile-api.js",
   "scripts": {
     "prepare:web": "node scripts/prepare-web-assets.mjs",
-    "cap:sync": "npm run prepare:web && npx cap sync"
+    "cap:sync": "npm run prepare:web && npx cap sync",
+    "locales:check": "python scripts/sync-locales.py check",
+    "locales:draft": "python scripts/sync-locales.py draft",
+    "locales:apply": "python scripts/sync-locales.py apply"
   },
   "keywords": [
     "prayer-times",

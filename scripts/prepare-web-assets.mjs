@@ -144,7 +144,7 @@ await esbuild.build({
   format: 'iife',
   globalName: 'MihrabBundle',
   platform: 'browser',
-  target: ['esnext'],
+  target: ['chrome69'],
   define: {
     __dirname: '"/app/src/engines"',
     __filename: '"/app/src/engines/index.js"',
@@ -164,5 +164,27 @@ await esbuild.build({
   }],
   minify: false,
 });
+
+// Use a single offline build for both old and new WebViews. These classic
+// scripts share top-level bindings, so transform each without bundling them.
+async function transformScripts(directory) {
+  for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+    const file = path.join(directory, entry.name);
+    if (entry.isDirectory()) await transformScripts(file);
+    else if (file.endsWith('.js') && file !== path.join(webDir, 'mobile-bundle.js')) {
+      const source = fs.readFileSync(file, 'utf8');
+      const result = await esbuild.transform(source, { target: 'chrome69', sourcefile: file });
+      fs.writeFileSync(file, result.code);
+    }
+  }
+}
+await transformScripts(webDir);
+const indexFile = path.join(webDir, 'index.html');
+let indexMarkup = fs.readFileSync(indexFile, 'utf8');
+for (const match of indexMarkup.matchAll(/<script>([\s\S]*?)<\/script>/g)) {
+  const result = await esbuild.transform(match[1], { target: 'chrome69', sourcefile: 'index.html' });
+  indexMarkup = indexMarkup.replace(match[0], () => '<script>' + result.code + '</script>');
+}
+fs.writeFileSync(indexFile, indexMarkup);
 
 console.log('✅ [prepare-web-assets] Mobile web assets and mobile-bundle.js prepared successfully in:', webDir);

@@ -240,7 +240,7 @@ label[for="settings-lock-mute"],
 .main-content .btn{min-height:40px;font-size:12px;padding:8px 12px}.main-content .input-field,.main-content .select-field{min-height:42px;font-size:14px;padding:9px 10px}
 .main-content #tab-prayers .hero-prayer-card{min-height:185px!important;padding:16px!important}
 #tab-prayers .next-prayer-title{font-size:28px!important;line-height:1.5}.next-prayer-label{font-size:12px}.countdown-box{font-size:25px!important;padding:4px 13px!important}#hero-pre-alert-info{font-size:11px!important;line-height:1.6}
-.hero-prayer-card>.region-settings-button{font-size:11px;padding:6px 9px;min-height:36px;top:12px;left:12px}
+.hero-prayer-card>.region-settings-button{font-size:11px;padding:6px 9px;min-height:36px;top:12px;inset-inline-end:12px}
 .main-content .prayers-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:7px!important}
 .main-content .prayer-item-card{min-height:118px!important;aspect-ratio:auto!important;padding:10px 6px!important;gap:6px!important}
 .prayer-item-card .prayer-name{font-size:17px}.prayer-item-card .prayer-time{font-size:20px}.prayer-item-card .btn{min-height:32px;font-size:10px;padding:4px 6px}
@@ -254,7 +254,7 @@ label[for="settings-lock-mute"],
 .quran-progress{margin-block:8px;gap:8px;font-size:11px}.quran-mode-panel>.video-card{padding:10px;gap:8px}.quran-mode-panel [id$='current-assignment']{font-size:18px!important}
 .quran-mode-panel [id$='range-desc']{font-size:11px!important}.quran-mode-panel .meta-pill{font-size:10px}
 .mobile-text-viewport{overflow:auto;overscroll-behavior:contain;box-sizing:border-box;touch-action:pan-x pan-y}.mobile-text-content{display:block;line-height:inherit;transform-origin:top right}
-.main-content #yt-videos-grid{grid-template-columns:1fr!important;gap:10px!important}
+.main-content #yt-videos-grid{gap:10px!important}
 .main-content .lesson-card{display:grid;grid-template-columns:112px minmax(0,1fr);gap:0;min-height:0;aspect-ratio:auto;overflow:hidden}
 .main-content .lesson-card .lesson-thumbnail-wrap{height:100%;min-height:118px;aspect-ratio:auto}.lesson-card .lesson-thumbnail{height:100%;object-fit:cover}
 .lesson-card .lesson-badge-overlay{font-size:9px;padding:3px 5px;max-width:100%;white-space:normal}
@@ -262,7 +262,7 @@ label[for="settings-lock-mute"],
 #yt-channels-list{display:flex!important;flex-wrap:nowrap;overflow-x:auto;gap:8px;max-width:100%}.channel-row{flex:0 0 220px;max-width:220px!important;width:220px!important;min-height:60px;padding:9px!important;box-sizing:border-box}.channel-row .channel-head{min-width:0;flex:1}.channel-row .channel-name{font-size:12px;overflow:hidden;overflow-wrap:anywhere}.channel-row .btn-danger{flex-shrink:0;min-height:34px!important;position:static!important;font-size:11px}
 .main-content #usage-chart{height:auto!important;min-height:270px;max-height:none;display:block}.usage-line-svg{width:100%;height:auto;min-height:270px}.usage-axis-label,.usage-time-label,.usage-no-data{font-size:13px!important}
 #action-feedback{position:fixed!important;top:auto!important;bottom:calc(70px + var(--safe-bottom))!important;left:50%;transform:translateX(-50%);max-width:calc(100% - 24px);width:max-content;padding:9px 14px;border-radius:12px;font-size:13px;z-index:10000;box-sizing:border-box}
-@media(min-width:700px){.main-content .prayers-grid{grid-template-columns:repeat(6,minmax(0,1fr))!important}.main-content #yt-videos-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
+@media(min-width:700px){.main-content .prayers-grid{grid-template-columns:repeat(6,minmax(0,1fr))!important}}
 .main-content #quran-unified-card{gap:6px!important}
 #quran-unified-card>.card-header{padding-bottom:5px;margin-bottom:3px;min-height:0}
 #quran-riwaya-badge{font-size:11px;padding:3px 8px;line-height:1.5}

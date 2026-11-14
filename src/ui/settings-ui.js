@@ -59,9 +59,9 @@ function collectRegionSettings() {
   return {
     location: {
       autoDetect: false,
-      city: value('settings-city-name').trim(),
+      city: regionNameValue('settings-city-name').trim(),
       countryCode: value('settings-country-select'),
-      country: value('settings-country-name').trim(),
+      country: regionNameValue('settings-country-name').trim(),
       timeZone: value('settings-time-zone'),
       calculationMethod: value('settings-calc-method'),
       calculationMethodSelection: state.methodManuallySelected ? 'manual' : 'auto',
@@ -537,12 +537,12 @@ let resourceStats = null,
   pendingDataDeletion = null;
 const networkPolicyCategories = ['youtube','hadith','prayer','location','other'];
 const resourceCategoryNames = {android: 'إجمالي التطبيق — رفع وتنزيل'};
-function formatResourceBytes(bytes) {
+function formatResourceBytes(bytes, base = 1024) {
   const n = Math.max(0, Number(bytes) || 0);
-  if (n < 1024) return n + ' B';
-  if (n < 1048576) return (n / 1024).toFixed(1) + ' KB';
-  if (n < 1073741824) return (n / 1048576).toFixed(1) + ' MB';
-  return (n / 1073741824).toFixed(2) + ' GB';
+  if (n < base) return n + ' B';
+  if (n < base ** 2) return (n / base).toFixed(1) + ' KB';
+  if (n < base ** 3) return (n / base ** 2).toFixed(1) + ' MB';
+  return (n / base ** 3).toFixed(2) + ' GB';
 }
 function resourcePolicyFromForm() {
   return {
@@ -579,7 +579,7 @@ function resourceAmount(bytes) {
     : (n / 1024).toFixed(n < 1024 ? 2 : 1) + ' KB';
 }
 function renderStorageComposition(disk) {
-  document.getElementById('disk-total').textContent = formatResourceBytes(disk.total);
+  document.getElementById('disk-total').textContent = formatResourceBytes(disk.total, 1000);
   const bar = document.getElementById('storage-composition'),
     legend = document.getElementById('storage-legend'),
     tooltip = document.getElementById('storage-tooltip');
@@ -651,6 +651,13 @@ function usageChartSamples(stats, range, now = Date.now()) {
 }
 function renderUsageChart() {
   if (!resourceStats) return;
+  const t = window.mihrabLocale.t;
+  const since = resourceStats.since
+    ? t('usage.since', { date: new Date(resourceStats.since).toLocaleString(document.documentElement.lang) }) : '';
+  const unknown = resourceStats.unknownResponses
+    ? t('usage.unknown', { count: resourceStats.unknownResponses }) : '';
+  document.getElementById('usage-since').textContent =
+    [since, t('usage.estimate'), unknown, window.mihrabLocale.localize(resourceStats.networkMeasurement || '')].filter(Boolean).join(' ');
   const samples = usageChartSamples(resourceStats, resourceRange),
     chart = document.getElementById('usage-chart'),
     tooltip = document.getElementById('usage-tooltip');
@@ -786,7 +793,7 @@ function renderUsageChart() {
     tooltip.replaceChildren();
     const title = document.createElement('strong');
     title.textContent =
-      new Date(p.start).toLocaleString('ar', {
+      new Date(p.start).toLocaleString(document.documentElement.lang, {
         timeZone: 'UTC',
         dateStyle: 'medium',
         ...(resourceRange === 1 ? { timeStyle: 'short' } : {}),
@@ -794,12 +801,12 @@ function renderUsageChart() {
     tooltip.append(title);
     const total = document.createElement('p');
     total.textContent = p.known
-      ? 'الإجمالي: ' + resourceAmount(p.total) + (p.partial ? ' — بدأ القياس خلال هذه الفترة' : '')
+      ? window.mihrabLocale.t('usage.total', { amount: resourceAmount(p.total) }) + (p.partial ? ' — ' + window.mihrabLocale.t('usage.partial') : '')
       : 'لا توجد بيانات مسجلة لهذه الفترة؛ الصفر المعروض ليس قياساً فعلياً.';
     tooltip.append(total);
-    for (const [key, label] of Object.entries(resourceCategoryNames)) {
+    for (const key of Object.keys(resourceCategoryNames)) {
       const row = document.createElement('p');
-      row.textContent = label + ': ' + (p.known ? resourceAmount(p.values[key] || 0) : 'غير مسجل');
+      row.textContent = window.mihrabLocale.t('usage.row', { label: window.mihrabLocale.t('usage.category.' + key), amount: p.known ? resourceAmount(p.values[key] || 0) : window.mihrabLocale.t('usage.missing') });
       tooltip.append(row);
     }
     tooltip.hidden = false;
@@ -842,16 +849,15 @@ function renderUsageChart() {
   chart.onfocus = () => show(index);
   const total = samples.reduce((sum, p) => sum + p.total, 0);
   document.getElementById('usage-total').textContent =
-    (resourceRange === 1 ? 'استهلاك آخر 24 ساعة: ' : 'استهلاك المدة المعروضة: ') +
-    resourceAmount(total);
+    window.mihrabLocale.t(resourceRange === 1 ? 'usage.day' : 'usage.period', { amount: resourceAmount(total) });
   document.getElementById('usage-coverage-note').textContent =
     'التوقيت العالمي UTC. الأجزاء المخططة تعني عدم وجود سجل سابق، وتُعرض عند الصفر دون اعتبارها استهلاكاً مقاساً.';
   const host = document.getElementById('usage-categories');
   host.replaceChildren();
-  for (const [key, label] of Object.entries(resourceCategoryNames)) {
+  for (const key of Object.keys(resourceCategoryNames)) {
     const row = document.createElement('p');
     row.textContent =
-      label + ': ' + resourceAmount(samples.reduce((sum, p) => sum + (p.values[key] || 0), 0));
+      window.mihrabLocale.t('usage.row', { label: window.mihrabLocale.t('usage.category.' + key), amount: resourceAmount(samples.reduce((sum, p) => sum + (p.values[key] || 0), 0)) });
     host.append(row);
   }
 }
@@ -911,7 +917,6 @@ async function refreshResourceStats() {
     document.getElementById('disk-measurement-note').textContent=resourceStats.measurement||'';
     renderStorageComposition(resourceStats.disk);
     document.getElementById('memory-used').textContent = formatResourceBytes(resourceStats.memory);
-    document.getElementById('usage-since').textContent = (resourceStats.since ? 'بدأ القياس في '+new Date(resourceStats.since).toLocaleString('ar')+'. ' : '')+(resourceStats.networkMeasurement||'');
     renderUsageChart();
     status.textContent = '';
   } catch (error) {
@@ -1012,7 +1017,7 @@ function collectAutomationSettings(){
 document.getElementById('automatic-settings').addEventListener('change',refreshSettingsDraftStatus);
 
 async function initializeInitialLocation(){
- if(state.config?.locationPermissionAsked)return;
+ if(state.deviceCapabilities?.gps === false || state.config?.locationPermissionAsked)return;
  const native=window.MihrabNative?.DeviceInfo;
  if(native?.requestLocationPermission){
    const result=await native.requestLocationPermission();
@@ -1035,7 +1040,7 @@ async function initializeInitialLocation(){
 
 function syncAutomationButtons(config){
  document.getElementById('btn-sync-habous').hidden = config.automation?.verifyPrayerTimes ?? config.officialSync?.enabled !== false;
- document.getElementById('btn-auto-location').hidden = config.location?.autoUpdate === true && config.location?.source === 'device' && !config.locationPermissionDenied;
+ document.getElementById('btn-auto-location').hidden = state.deviceCapabilities?.gps === false || config.location?.autoUpdate === true && config.location?.source === 'device' && !config.locationPermissionDenied;
 }
 
 document.getElementById('location-auto-update').addEventListener('change',async event=>{
@@ -1052,3 +1057,5 @@ document.getElementById('location-auto-update').addEventListener('change',async 
  }catch(error){input.checked=state.config?.location?.autoUpdate===true;showOperationResultModal({success:false,title:'تعذر تفعيل تحديث الموقع',summary:error.message});}
  finally{input.disabled=false;}
 });
+
+window.addEventListener('mihrab:interface-language-changed', renderUsageChart);

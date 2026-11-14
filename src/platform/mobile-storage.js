@@ -253,9 +253,10 @@ class MobileStorage {
     return merged;
   }
 
-  saveConfig(partialOrFullConfig) {
+  saveConfig(partialOrFullConfig, fromSync = false, previousSettings) {
     const current = this.getConfig();
     const updated = this.deepMerge(current, partialOrFullConfig);
+    updated.syncClocks = require('../engines/local-sync-contract').recordEdits(previousSettings ? {...current,sharedSettings:previousSettings} : current,updated,undefined,fromSync ? null : Date.now());
     if (updated.screenLock) {
       delete updated.screenLock.lockDurationMinutes;
     }

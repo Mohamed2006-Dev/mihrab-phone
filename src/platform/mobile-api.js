@@ -90,7 +90,14 @@ class MihrabMobileApi {
 
   currentPerformance() {
     const config = this.storage.getConfig();
-    return PerformanceEngine.resolve(config,this.hardware);
+    return PerformanceEngine.resolve(config,this.hardware,this.performanceSignals);
+  }
+
+  async updatePerformanceSignals(signals) {
+    const power = await globalThis.window?.MihrabNative?.DeviceInfo?.getPowerState?.()
+      .catch(() => null);
+    this.performanceSignals = { ...signals, ...power };
+    return this.currentPerformance();
   }
 
   trimFeedForPerformance(feed) {
@@ -189,6 +196,7 @@ class MihrabMobileApi {
     setTimeout(()=>this.prayerAutomation.tick(this.getAppNow()),0);
     return {
       config: { ...config, location: currentLocation },
+      deviceCapabilities: this.hardware?.capabilities,
       countries,
       themeState,
       performanceProfile: this.currentPerformance(),
@@ -209,7 +217,16 @@ class MihrabMobileApi {
     return this.themeEngine.getActiveThemeState();
   }
 
-  async setTheme(themeId, mode) {
+  sharedSettings() {
+    const {activeTheme:theme,activeMode:mode}=this.themeEngine.getActiveThemeState();
+    return {language:localStorage.getItem('mihrab.interfaceLanguage')||'ar',theme,mode};
+  }
+
+  async setTheme(themeId, mode, fromSync = false) {
+    if(!fromSync){
+      const before=this.sharedSettings();
+      this.storage.saveConfig({sharedSettings:{...before,theme:themeId||before.theme,mode:mode||before.mode}},false,before);
+    }
     const newState = this.themeEngine.setTheme(themeId, mode);
     this.events.emit('theme:live-reloaded', newState);
     await this.publishPrayerWidget().catch(error=>console.warn('[Mihrab widget]',error.message));
@@ -223,25 +240,35 @@ class MihrabMobileApi {
   // ==========================================================================
   // 3. مواقيت الصلاة والموقع (Prayer Times & Location)
   // ==========================================================================
-  rescheduleNotifications(prayerData){
-    this.notificationQueue=(this.notificationQueue||Promise.resolve()).catch(()=>{}).then(async()=>{
-      if(typeof window!=='undefined')await window.MihrabBoot?.whenReady;
-      const data=this.prayerEngine.calculateLocalPrayerTimes(this.getAppNow());
-      await this.publishPrayerWidget();
-      const recommendation=this.youtubeEngine.getFeedState('all').dailyRecommendation;
-      const config = this.storage.getConfig();
-      const now = this.getAppNow();
-      const zone = data.location?.effectiveTimeZone || data.location?.timeZone;
-      const horizon = config.notifications?.customReminders?.length ? 9 : 4;
-      const days = Array.from({ length: horizon }, (_, index) => {
-            const date = require('../engines/prayer-times-engine').shiftDay(now, index - 1, zone);
-            return { date, data: index === 1 ? data : this.prayerEngine.calculateLocalPrayerTimes(date) };
-          });
-      return this.notifications.schedulePrayerAlarms(data, config, null, recommendation, days, now);
-    });
+  rescheduleNotifications(){
+    if (this.hardware?.capabilities?.notifications === false) return Promise.resolve();
+    this.notificationRevision = (this.notificationRevision || 0) + 1;
+    if (this.notificationQueue) return this.notificationQueue;
+    this.notificationQueue = Promise.resolve().then(async () => {
+      let result;
+      let revision;
+      do {
+        if(typeof window!=='undefined')await window.MihrabBoot?.whenReady;
+        revision = this.notificationRevision;
+        const data=this.prayerEngine.calculateLocalPrayerTimes(this.getAppNow());
+        await this.publishPrayerWidget();
+        const recommendation=this.youtubeEngine.getFeedState('all').dailyRecommendation;
+        const config = this.storage.getConfig();
+        const now = this.getAppNow();
+        const zone = data.location?.effectiveTimeZone || data.location?.timeZone;
+        const horizon = config.notifications?.customReminders?.length ? 9 : 4;
+        const days = Array.from({ length: horizon }, (_, index) => {
+              const date = require('../engines/prayer-times-engine').shiftDay(now, index - 1, zone);
+              return { date, data: index === 1 ? data : this.prayerEngine.calculateLocalPrayerTimes(date) };
+            });
+        result = await this.notifications.schedulePrayerAlarms(data, config, null, recommendation, days, now);
+      } while (revision !== this.notificationRevision);
+      return result;
+    }).finally(() => { this.notificationQueue = null; });
     return this.notificationQueue;
   }
   async setAutomaticLocation(enabled){
+    if (enabled && this.hardware?.capabilities?.gps === false) return this.detectLocation();
     if(this.automaticLocationBusy)throw Error('انتظر اكتمال طلب الموقع.');
     this.automaticLocationBusy=true;
     try{
@@ -276,9 +303,9 @@ class MihrabMobileApi {
       const c=this.storage.getConfig(),native=window.MihrabNative.DeviceInfo;
       const system=native?.getPermissionStates?await native.getPermissionStates():null;
       const geo=system?null:await window.MihrabNative.Geolocation.checkPermissions();
-      const location=system?system.location:geo.location==='granted'||geo.coarseLocation==='granted';
+      const location=this.hardware?.capabilities?.gps !== false && (system?system.location:geo.location==='granted'||geo.coarseLocation==='granted');
       let notices=system?system.notifications:await this.notifications.checkPermission();
-      if(requestNotifications&&!c.notificationPermissionAsked){
+      if(requestNotifications && this.hardware?.capabilities?.notifications !== false && !c.notificationPermissionAsked){
         this.storage.saveConfig({notificationPermissionAsked:true});
         notices=await this.notifications.requestPermission();
       }
@@ -301,7 +328,7 @@ class MihrabMobileApi {
   }
   async refreshDeviceLocation(){
     const location=this.storage.getConfig().location;
-    if(location?.autoUpdate!==true||this.locationRefreshing||Date.now()-(this.lastLocationAttempt||0)<1800000)return;
+    if(this.hardware?.capabilities?.gps === false || location?.autoUpdate!==true||this.locationRefreshing||Date.now()-(this.lastLocationAttempt||0)<1800000)return;
     this.lastLocationAttempt=Date.now();this.locationRefreshing=true;
     try{const result=await this.locationService.detect({requestPermission:false});if(!result.success){const native=window.MihrabNative?.DeviceInfo;const system=native?.getPermissionStates?await native.getPermissionStates():null;if(system?.location===false)this.storage.saveConfig({location:{autoUpdate:false},locationPermissionDenied:true});this.events.emit('app:config-updated',this.storage.getConfig());return;}
       const country=this.prayerEngine.geography.country(result.countryCode);
@@ -319,6 +346,8 @@ class MihrabMobileApi {
   }
 
   async detectLocation() {
+    if (this.hardware?.capabilities?.gps === false)
+      return { success: false, error: 'تحديد الموقع غير متاح؛ اختر المدينة يدوياً.', config: this.storage.getConfig() };
     const res=await this.locationService.detect();
     this.storage.saveConfig({locationPermissionAsked:true,locationPermissionDenied:!res.success,...(!res.success?{location:{autoUpdate:false}}:{})});
     if(!res.success)return res;
@@ -544,7 +573,15 @@ class MihrabMobileApi {
 
   async getChannelAvatar(id) {
     if(!networkAllowed(this.storage.getConfig(),'youtube'))return null;
+    const profile = this.currentPerformance().profile;
+    if (!profile.images) {
+      this.avatarRequests?.clear();
+      return null;
+    }
     this.avatarRequests ||= new Map();
+    const limit = profile.id === 'balanced' ? 32 : 100;
+    while (!this.avatarRequests.has(id) && this.avatarRequests.size >= limit)
+      this.avatarRequests.delete(this.avatarRequests.keys().next().value);
     if(!this.avatarRequests.has(id))this.avatarRequests.set(id,this.youtubeEngine.getChannelPage('https://www.youtube.com/channel/'+encodeURIComponent(id)).then(page=>page.avatarUrl).catch(error=>{this.avatarRequests.delete(id);console.warn('Channel avatar unavailable',id,error.message);return null;}));
     return this.avatarRequests.get(id);
   }
@@ -602,7 +639,13 @@ class MihrabMobileApi {
 
     if (patch.notifications?.customReminders !== undefined)
       require('../engines/custom-reminders').validate(patch.notifications.customReminders);
-    const saved = this.storage.saveConfig(patch);
+    if(fromSync&&patch.sharedSettings){
+      const {language,theme,mode}=patch.sharedSettings;
+      const next=await this.setTheme(theme,mode,true);
+      if(next.activeTheme!==theme||next.activeMode!==mode)throw Error('theme_save_failed');
+      localStorage.setItem('mihrab.interfaceLanguage',language);
+    }
+    const saved = this.storage.saveConfig(patch,fromSync);
     if(newConfig.location||newConfig.automation||newConfig.network)setTimeout(()=>this.prayerAutomation.tick(this.getAppNow()),0);
     const prayerData = this.prayerEngine.calculateLocalPrayerTimes(this.getAppNow());
     const quranState = this.quranEngine.getFullStatus(prayerData);
@@ -613,6 +656,7 @@ class MihrabMobileApi {
     if (fromSync) {
       this.events.emit('app:sync-applied', {
         config: saved,
+        interfaceLanguage: patch.sharedSettings?.language,
         prayerData: patch.location ? prayerData : undefined,
         quranState: patch.quranWird || patch.location ? quranState : undefined,
         youtubeState: patch.youtube ? this.youtubeEngine.getFeedState() : undefined,
@@ -642,7 +686,7 @@ class MihrabMobileApi {
     if(typeof window!=='undefined'&&window.MihrabNative?.DeviceInfo?.getStorageStats)measured=await window.MihrabNative.DeviceInfo.getStorageStats();
     const bytes=value=>new TextEncoder().encode(JSON.stringify(value||{})).length;
     const localBytes=bytes(this.storage.getConfig())+bytes(this.hadithEngine.getDatabase())+bytes(this.youtubeEngine.getFeedState('all'));
-    return {disk:measured?.disk||{application:0,data:localBytes,profile:0,total:localBytes},memory:measured?.memory||0,measurement:measured?'حجم APK والملفات الخاصة بالتطبيق؛ لا يشمل محرك Android WebView المشترك.':'قياس جزئي للبيانات المحلية فقط؛ حجم التطبيق غير متاح في المتصفح.',since:usage.since,hourlySince:usage.since,days:usage.days,hours:usage.hours,networkAvailable:usage.available,networkMeasurement:usage.available?'قياس Android للرفع والتنزيل الخاصين بالتطبيق على الشبكات الخلوية وWi-Fi؛ لا يشمل التطبيقات الخارجية ولا يفصل الاستهلاك حسب الخدمة. يبدأ السجل من تفعيل القياس؛ تُنسب الفروق إلى فترة أخذ العينة.':'قياس استهلاك الشبكة غير متاح في هذه البيئة؛ لا تعتبر الأصفار قياساً فعلياً.',unknownResponses:0,network:networkPolicy(this.storage.getConfig())};
+    return {disk:measured?.disk||{application:0,data:localBytes,profile:0,total:localBytes},memory:measured?.memory||0,measurement:measured?.system?'':measured?'حجم APK والملفات الخاصة بالتطبيق؛ لا يشمل محرك Android WebView المشترك.':'قياس جزئي للبيانات المحلية فقط؛ حجم التطبيق غير متاح في المتصفح.',since:usage.since,hourlySince:usage.since,days:usage.days,hours:usage.hours,networkAvailable:usage.available,networkMeasurement:usage.available?'قياس Android للرفع والتنزيل الخاصين بالتطبيق على الشبكات الخلوية وWi-Fi؛ لا يشمل التطبيقات الخارجية ولا يفصل الاستهلاك حسب الخدمة. يبدأ السجل من تفعيل القياس؛ تُنسب الفروق إلى فترة أخذ العينة.':'قياس استهلاك الشبكة غير متاح في هذه البيئة؛ لا تعتبر الأصفار قياساً فعلياً.',unknownResponses:0,network:networkPolicy(this.storage.getConfig())};
   }
 
   async clearResourceCache() {
@@ -684,25 +728,27 @@ class MihrabMobileApi {
     return this.openExternalUrl(url);
   }
 
+  async previewBugReport(payload) {
+    const context = payload?.includeContext === true ? await this.feedbackContext(payload.language) : undefined;
+    return { ...buildReport(payload, undefined, context), context };
+  }
+
+  async feedbackContext(language) {
+    const app = typeof window !== 'undefined' && window.MihrabNative?.App;
+    const info = app ? await app.getInfo().catch(() => null) : null;
+    return {
+      AppVersion: info?.version || require('../../package.json').version,
+      Platform: app ? 'Android' : 'Web',
+      OS: app ? this.hardware?.osVersion || 'Android' : '',
+      Language: /^[a-z]{2}$/.test(language) ? language : '',
+      Recitation: this.storage.getConfig().quranWird?.riwaya || 'hafs',
+    };
+  }
+
   async openBugReport(payload) {
-    const issues =
-      payload?.channel === 'github' ? this.projectInfoEngine.readSource()?.['git-issues'] : undefined;
-    const contact=this.projectInfoEngine.readSource()?.['report-email'];
-    const draft = buildReport(payload, issues, contact?.replace(/^mailto:/i,''));
-    const native=typeof window!=='undefined'&&window.MihrabNative?.DeviceInfo;
-    if(payload.channel==='gmail'&&native?.openExternal){
-      const result=await native.openExternal({url:'mailto:'+draft.email.to,subject:draft.email.subject,body:draft.email.body});
-      if(!result?.opened)throw Error('تعذر فتح تطبيق البريد.');
-      return {...result,copyRequired:false,copied:false};
-    }
-    let copied=false,copyError=null;
-    if(draft.copyRequired){
-      try{if(!navigator.clipboard?.writeText)throw Error('الحافظة غير متاحة');await navigator.clipboard.writeText(draft.text);copied=true;}
-      catch(error){copyError=error.message;}
-    }
-    const result=await this.openExternalUrl(draft.url);
-    if(!result?.opened)throw Error('تعذر فتح وجهة البلاغ.');
-    return {...result,copyRequired:draft.copyRequired,copied,copyError};
+    const issues = payload?.channel === 'github' ? this.projectInfoEngine.readSource()?.['git-issues'] : undefined;
+    const context = payload?.includeContext === true ? await this.feedbackContext(payload.language) : undefined;
+    return this.openExternalUrl(buildReport(payload, issues, context).url);
   }
 
   // ==========================================================================
@@ -745,7 +791,7 @@ class MihrabMobileApi {
   async getUpdateStatus() {
     return {
       phase: 'unsupported',
-      version: '1.0.2',
+      version: '1.0.3',
       nextVersion: null,
       percent: 0,
       lastChecked: null,
@@ -792,6 +838,10 @@ function setupMihrabMobileApi(options = {}) {
   if (typeof window !== 'undefined') {
     window.mihrabApi = api;
     window.MihrabMobileApi = api;
+    window.addEventListener('mihrab:interface-language-changed', () => {
+      api.rescheduleNotifications().catch(error =>
+        api.events.emit('app:notification-error', { message: error.message }));
+    });
   }
   return api;
 }

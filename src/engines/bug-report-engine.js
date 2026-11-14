@@ -1,53 +1,35 @@
-const REPORT_EMAIL = 'anonymous.acc.unkown@gmail.com';
 const DEFAULT_ISSUES = 'https://github.com/Mohamed2006-Dev/mihrab-phone/issues';
+const FORM = 'https://docs.google.com/forms/d/e/1FAIpQLSdaBg_HnhuzQAMz-E_PLfp2Io2efGXx6LbB60tcystxRpr9Ow/viewform';
+const { reportSections } = require('../ui/report-taxonomy');
 function issueBase(value = DEFAULT_ISSUES) {
-  let url;
-  try {
-    url = new URL(value);
-  } catch {
-    throw Error('رابط git-issues غير صالح.');
-  }
-  if (
-    url.protocol !== 'https:' ||
-    url.hostname !== 'github.com' ||
-    url.username ||
-    url.password ||
-    url.port ||
-    !/^\/[\w.-]+\/[\w.-]+\/issues(?:\/new)?\/?$/.test(url.pathname)
-  )
-    throw Error('يجب أن يكون git-issues رابط Issues لمستودع GitHub عبر HTTPS.');
-  return (
-    url.origin +
-    url.pathname
-      .replace(/\/(?:new\/?)?$/, '')
-      .replace(/\/$/, '')
-      .replace(/\/new$/, '')
-  );
+  const url = new URL(value);
+  if (url.origin !== 'https://github.com' || url.username || url.password ||
+      !/^\/[^/]+\/[^/]+\/issues(?:\/new)?\/?$/.test(url.pathname)) throw Error('Invalid GitHub Issues URL');
+  return url.origin + url.pathname.replace(/\/$/, '').replace(/\/new$/, '');
 }
-function buildReport(payload, issues, recipient = REPORT_EMAIL) {
-  if(!/^[^\s@?&#]+@[^\s@?&#]+\.[^\s@?&#]+$/.test(recipient))throw Error("بريد استقبال البلاغات غير صالح.");
-  if (!payload || !['github', 'gmail'].includes(payload.channel))
-    throw Error('اختر منصة تبليغ صحيحة.');
-  const scope = typeof payload.scope === 'string' ? payload.scope.trim() : '',
-    description = typeof payload.description === 'string' ? payload.description.trim() : '';
-  if (
-    !scope ||
-    scope.length > 120 ||
-    /[\r\n]/.test(scope) ||
-    !description ||
-    description.length > 8000
-  )
-    throw Error('راجع نطاق الخطأ ووصفه.');
-  const title = '[محراب] ' + scope,
-    body = 'نطاق الخطأ: ' + scope + '\n\nوصف الخطأ:\n' + description;
-  if(payload.channel==='gmail'){
-    const full='mailto:'+recipient+'?subject='+encodeURIComponent(title)+'&body='+encodeURIComponent(body);
-    const copyRequired=full.length>7000;
-    return {url:copyRequired?'mailto:'+recipient:full,copyRequired,email:{to:recipient,subject:title,body},text:title+'\n\n'+body};
+
+function buildReport({ channel, type, section, description, note, includeContext }, issues, context) {
+  if (!['github', 'google'].includes(channel) || !Object.hasOwn(reportSections, type) ||
+      !reportSections[type].includes(section) || typeof description !== 'string' ||
+      !description.trim() || description.length > 8000 ||
+      typeof note !== 'string' || note.length > 300) throw Error('Invalid feedback');
+  const technical = includeContext === true && context
+    ? Object.entries(context).filter(([, value]) => value).map(([key, value]) => key + ': ' + value).join('\n')
+    : '';
+  const title = '[Mihrab] ' + type + ' — ' + section;
+  const body = ['Report Type: ' + type, 'Affected Section: ' + section,
+    'Report Details:\n' + description, technical && 'Technical Context:\n' + technical,
+    note.trim() && 'Additional Note:\n' + note].filter(Boolean).join('\n\n');
+  const url = new URL(channel === 'github' ? issueBase(issues) + '/new' : FORM);
+  if (channel === 'github') {
+    url.search = new URLSearchParams({ title, labels: type + ',' + section, body });
+  } else {
+    const fields = new URLSearchParams({ usp: 'pp_url', 'entry.1660817971': type,
+      'entry.1255775619': section, 'entry.2019314870': description });
+    if (technical) fields.set('entry.1786272504', technical);
+    if (note.trim()) fields.set('entry.639829357', note);
+    url.search = fields;
   }
-  const base=issueBase(issues)+'/new';
-  const url=new URL(base);url.searchParams.set('title',title);url.searchParams.set('body',body);
-  const full=url.href,copyRequired=full.length>7000;
-  return {url:copyRequired?base:full,copyRequired,text:title+'\n\n'+body};
+  return { url: url.href, text: title + '\n\n' + body };
 }
-module.exports = { buildReport, issueBase, REPORT_EMAIL, DEFAULT_ISSUES };
+module.exports = { buildReport };

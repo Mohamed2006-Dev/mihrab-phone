@@ -22,7 +22,7 @@ const PROFILES = {
   eco: {
     id: 'eco',
     title: 'اقتصادي',
-    batchSize: 6,
+    batchSize: 4,
     images: false,
     paged: true,
     animations: false,
@@ -42,40 +42,32 @@ function detectHardware(source = os) {
     };
   }
 
-  // Mobile / Browser environment
-  const logicalCores =
-    typeof navigator !== 'undefined' && navigator.hardwareConcurrency >= 8
-      ? navigator.hardwareConcurrency
-      : 8;
-  const memoryGB =
-    typeof navigator !== 'undefined' && navigator.deviceMemory >= 12
-      ? navigator.deviceMemory
-      : 12;
   return {
-    memoryGB,
-    logicalCores,
-    cpuMHz: 2800,
-    processor: 'الهاتف الذكي',
+    memoryGB: globalThis.navigator?.deviceMemory || 0,
+    logicalCores: globalThis.navigator?.hardwareConcurrency || 0,
+    cpuMHz: 0,
   };
 }
 
-function recommend(hw) {
-  if (
-    hw.memoryGB <= 4.5 ||
-    hw.logicalCores <= 2 ||
-    (hw.logicalCores <= 4 && hw.cpuMHz > 0 && hw.cpuMHz < 1700)
-  )
+function recommend(hw, signals = {}) {
+  const low = (value, threshold) => value > 0 && value <= threshold;
+  if (low(hw.memoryGB, 4.5) || low(hw.logicalCores, 2) ||
+      signals.powerSaver === true || signals.framePacing === 'poor' || signals.pressure === 2)
     return 'eco';
-  if (hw.memoryGB <= 8.5 || hw.logicalCores <= 4 || (hw.cpuMHz > 0 && hw.cpuMHz < 2200))
+  if (!hw.memoryGB || !hw.logicalCores || low(hw.memoryGB, 8.5) || low(hw.logicalCores, 4) ||
+      signals.lowBattery === true || signals.reducedMotion === true ||
+      (['software', 'unavailable'].includes(signals.graphics) &&
+        (low(hw.memoryGB, 12) || low(hw.logicalCores, 6))) ||
+      signals.framePacing === 'mixed' || signals.pressure === 1)
     return 'balanced';
   return 'full';
 }
 
-function resolve(config = {}, hw = detectHardware()) {
+function resolve(config = {}, hw = detectHardware(), signals = {}) {
   const selection = ['auto', 'full', 'balanced', 'eco'].includes(config.performance?.level)
       ? config.performance.level
       : 'auto',
-    recommended = recommend(hw);
+    recommended = recommend(hw, signals);
   return {
     selection,
     recommended,

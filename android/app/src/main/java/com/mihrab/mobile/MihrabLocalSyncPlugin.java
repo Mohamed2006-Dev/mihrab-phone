@@ -18,6 +18,7 @@ import java.security.SecureRandom;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.Arrays;
+import javax.crypto.AEADBadTagException;
 import javax.crypto.Cipher;
 import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
@@ -44,10 +45,11 @@ public class MihrabLocalSyncPlugin extends Plugin {
         else call.reject("لم يُمنح إذن الكاميرا. يمكنك قراءة الرمز من صورة.");
     }
 
-    private SecretKey storageKey() throws Exception {
+    private SecretKey storageKey(boolean create) throws Exception {
         KeyStore store = KeyStore.getInstance("AndroidKeyStore");
         store.load(null);
         if (!store.containsAlias(KEY)) {
+            if (!create) return null;
             KeyGenerator generator = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, "AndroidKeyStore");
             generator.init(new KeyGenParameterSpec.Builder(KEY,
                     KeyProperties.PURPOSE_ENCRYPT | KeyProperties.PURPOSE_DECRYPT)
@@ -61,16 +63,36 @@ public class MihrabLocalSyncPlugin extends Plugin {
 
     @PluginMethod public void loadState(PluginCall call) {
         try {
-            String encoded = getContext().getSharedPreferences(KEY, Context.MODE_PRIVATE).getString("sealed", null);
+            android.content.SharedPreferences preferences =
+                    getContext().getSharedPreferences(KEY, Context.MODE_PRIVATE);
+            String encoded = preferences.getString("sealed", null);
             JSObject result = new JSObject();
             if (encoded != null) {
-                byte[] packed = Base64.decode(encoded, Base64.NO_WRAP);
-                Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
-                cipher.init(Cipher.DECRYPT_MODE, storageKey(), new GCMParameterSpec(128, packed, 0, 12));
-                result.put("state", new String(cipher.doFinal(packed, 12, packed.length - 12), StandardCharsets.UTF_8));
+                SecretKey key = storageKey(false);
+                String state = key == null ? null : unseal(encoded, key);
+                if (state == null) {
+                    if (!preferences.edit().remove("sealed").commit()) throw new IllegalStateException();
+                    result.put("recovered", true);
+                } else {
+                    result.put("state", state);
+                }
             }
             call.resolve(result);
-        } catch (Exception error) { call.reject("تعذر فتح مخزن الربط المحلي.", error); }
+        } catch (Exception error) {
+            call.reject("تعذر فتح مخزن الربط المحلي.", "LOCAL_SYNC_STORE_OPEN_FAILED", error);
+        }
+    }
+
+    private String unseal(String encoded, SecretKey key) throws Exception {
+        try {
+            byte[] packed = Base64.decode(encoded, Base64.NO_WRAP);
+            if (packed.length < 28) return null;
+            Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
+            cipher.init(Cipher.DECRYPT_MODE, key, new GCMParameterSpec(128, packed, 0, 12));
+            return new String(cipher.doFinal(packed, 12, packed.length - 12), StandardCharsets.UTF_8);
+        } catch (AEADBadTagException | IllegalArgumentException unreadable) {
+            return null;
+        }
     }
 
     @PluginMethod public void saveState(PluginCall call) {
@@ -82,7 +104,7 @@ public class MihrabLocalSyncPlugin extends Plugin {
             if (state.isEmpty()) editor.remove("sealed");
             else {
                 Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
-                cipher.init(Cipher.ENCRYPT_MODE, storageKey());
+                cipher.init(Cipher.ENCRYPT_MODE, storageKey(true));
                 ByteArrayOutputStream packed = new ByteArrayOutputStream();
                 packed.write(cipher.getIV());
                 packed.write(cipher.doFinal(state.getBytes(StandardCharsets.UTF_8)));
@@ -165,7 +187,14 @@ public class MihrabLocalSyncPlugin extends Plugin {
                     }
                 }
                 call.resolve(result);
-            } catch (Exception error) { android.util.Log.w("MihrabLocalSync", error.getClass().getSimpleName()); call.reject("تعذر الاتصال بالحاسوب عبر الشبكة المحلية الموثّقة."); }
+            } catch (Exception error) {
+                android.util.Log.w("MihrabLocalSync", error.getClass().getSimpleName());
+                if (error instanceof javax.net.ssl.SSLException)
+                    call.reject("تعذر التحقق من هوية الحاسوب. أنشئ رمز ربط جديدًا وتحقق من ضبط الساعة على الجهازين.", "sync_identity_failed");
+                else if (error instanceof java.net.SocketException || error instanceof java.net.SocketTimeoutException)
+                    call.reject("تعذر الوصول إلى الحاسوب على TCP 17777. تحقق من الشبكة المحلية وجدار الحماية في الحاسوب.", "sync_network_unreachable");
+                else call.reject("تعذر الاتصال بالحاسوب عبر الشبكة المحلية الموثّقة.", "sync_transport_failed");
+            }
             finally { if (connection != null) connection.disconnect(); }
         }, "mihrab-local-sync").start();
     }

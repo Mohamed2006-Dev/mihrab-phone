@@ -12,7 +12,7 @@ class MobileNetworkMeter {
   async collect() {
     const counter = await this.readCounters();
     if (!counter || counter.supported === false || !Number.isSafeInteger(counter.rx) || !Number.isSafeInteger(counter.tx) || counter.rx < 0 || counter.tx < 0) {
-      return {...structuredClone(this.state), available: false};
+      return {...JSON.parse(JSON.stringify(this.state)), available: false};
     }
     const date = this.now(), iso = date.toISOString(), previous = this.state.baseline;
     this.state.since ||= iso;
@@ -29,7 +29,7 @@ class MobileNetworkMeter {
       for (const key of Object.keys(table)) if (key < cutoff) delete table[key];
     }
     this.storage.writeJsonSafe('network-usage', this.state);
-    return {...structuredClone(this.state), available: true};
+    return {...JSON.parse(JSON.stringify(this.state)), available: true};
   }
 }
 module.exports = {MobileNetworkMeter};

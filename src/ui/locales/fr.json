@@ -1653,12 +1653,8 @@
   "feedback.section.ui-ux-simplification": "Simplifier et organiser l'interface",
   "feedback.prompt.ui-ux-simplification": "Quel écran ou action nécessite une simplification ? Comment suggéreriez-vous de le présenter ?",
   "update.release103.title": "Nouveautés de la version 1.0.2 à la 1.0.3 ?",
-  "update.release103.sync": "Ajout de la synchronisation locale entre le téléphone et l'ordinateur, avec sélection de la source de données lors de la première synchronisation et vérification de la compatibilité du protocole.",
-  "update.release103.reader": "Amélioration de l'affichage du Mushaf du Wird et de la justification des lignes, avec des corrections pour le rognage des pages dans certaines langues et une préparation plus rapide des pages adjacentes.",
-  "update.release103.feedback": "Ajout d'un formulaire de signalement catégorisé qui prépare les détails pour Google Forms et GitHub.",
-  "update.release103.locales": "Revue des traductions de l'interface, de la terminologie religieuse et des noms des sourates, et masquage du champ Muhaddith lorsqu'il est absent de la source.",
-  "update.release103.lessons": "Correction de l'affichage du nom des chaînes, de la numérotation des leçons et de la mise en page des boutons de navigation par lot.",
-  "update.release103.performance": "Réduction des effets visuels en mode Économique et amélioration de la mise en cache et du traitement par lot des tâches de l'interface utilisateur.",
-  "update.release103.notifications": "Résolution de la planification en double des notifications et amélioration de l'affichage des messages d'échec de synchronisation.",
-  "update.release103.android": "Ajout de la lecture en plein écran et du balayage des pages, amélioration de la compatibilité avec les anciennes versions de WebView et masquage des options matérielles indisponibles."
+  "update.release103.locales": "L’interface est disponible en sept langues. Changez de langue dans les paramètres.",
+  "update.release103.translation": "Lisez la traduction du sens du Coran dans le Mushaf avec la récitation Hafs d’après Asim.",
+  "update.release103.adhkar": "Une interface plus simple et un affichage des adhkar allégé en mode Économique.",
+  "update.release103.sync": "Synchronisation améliorée entre le téléphone et l’ordinateur, avec le choix de l’appareil source au premier échange."
 }

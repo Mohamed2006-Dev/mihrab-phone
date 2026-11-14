@@ -1653,12 +1653,8 @@
   "feedback.section.ui-ux-simplification": "Arayüzü Sadeleştir ve Düzenle",
   "feedback.prompt.ui-ux-simplification": "Hangi ekran veya işlem sadeleştirilmeli? Nasıl sunulmasını önerirsiniz?",
   "update.release103.title": "1.0.2'den 1.0.3'e neler yeni?",
-  "update.release103.sync": "İlk senkronizasyonda veri kaynağı seçimi ve protokol uyumluluğu doğrulaması ile telefon ve bilgisayar arasında yerel senkronizasyon eklendi.",
-  "update.release103.reader": "Vird Mushaf görüntülemesi ve satır hizalaması iyileştirildi; bazı dillerde sayfa kırpma sorunları giderildi ve komşu sayfaların hazırlanması hızlandırıldı.",
-  "update.release103.feedback": "Google Forms ve GitHub için ayrıntıları hazırlayan kategorize edilmiş bir rapor formu eklendi.",
-  "update.release103.locales": "Arayüz çevirileri, dini terminoloji ve sure adları gözden geçirildi; kaynakta bulunmayan Muhaddis alanı gizlendi.",
-  "update.release103.lessons": "Kanal adı görüntüleme, ders numaralandırma ve toplu gezinme düğmelerinin yerleşimi düzeltildi.",
-  "update.release103.performance": "Tasarruf modunda görsel efektler azaltıldı ve arayüz işlemlerinin önbelleğe alınması ve toplu işlenmesi iyileştirildi.",
-  "update.release103.notifications": "Yinelenen bildirim zamanlaması çözüldü ve senkronizasyon hata mesajlarının görüntülenmesi iyileştirildi.",
-  "update.release103.android": "Tam ekran okuma ve sayfa kaydırma eklendi, eski WebView uyumluluğu iyileştirildi ve kullanılamayan donanım seçenekleri gizlendi."
+  "update.release103.locales": "Arayüz yedi dilde kullanılabilir. Dili ayarlardan değiştirebilirsiniz.",
+  "update.release103.translation": "Âsım kıraatinin Hafs rivayetiyle mushaf içinde Kur’an mealini okuyabilirsiniz.",
+  "update.release103.adhkar": "Daha sade bir arayüz ve Ekonomik modda daha hafif bir zikir ekranı.",
+  "update.release103.sync": "Telefon ile bilgisayar arasında iyileştirilmiş eşitleme. İlk eşitlemenin hangi cihazdan başlayacağını seçebilirsiniz."
 }

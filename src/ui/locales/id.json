@@ -1653,12 +1653,8 @@
   "feedback.section.ui-ux-simplification": "Sederhanakan & Atur Tampilan (UI)",
   "feedback.prompt.ui-ux-simplification": "Layar atau tindakan mana yang perlu disederhanakan? Bagaimana Anda menyarankan untuk menyajikannya?",
   "update.release103.title": "Apa yang baru dari 1.0.2 ke 1.0.3?",
-  "update.release103.sync": "Menambahkan sinkronisasi lokal antara ponsel dan komputer, dengan pemilihan sumber data pada sinkronisasi pertama dan verifikasi kompatibilitas protokol.",
-  "update.release103.reader": "Tampilan Mushaf Wird dan perataan baris ditingkatkan, masalah pemotongan halaman dalam beberapa bahasa diperbaiki, dan penyiapan halaman yang berdekatan dipercepat.",
-  "update.release103.feedback": "Menambahkan formulir laporan terkategori yang menyiapkan detail untuk Google Forms dan GitHub.",
-  "update.release103.locales": "Terjemahan antarmuka, istilah agama, dan nama surah ditinjau, serta kolom Muhadis disembunyikan jika tidak ada di sumber.",
-  "update.release103.lessons": "Memperbaiki tampilan nama saluran, penomoran pelajaran, dan tata letak tombol navigasi batch.",
-  "update.release103.performance": "Efek visual dalam mode Hemat telah dikurangi, serta caching dan pemrosesan batch tugas antarmuka ditingkatkan.",
-  "update.release103.notifications": "Penjadwalan notifikasi berulang telah diatasi dan tampilan pesan gagal sinkronisasi telah diperbaiki.",
-  "update.release103.android": "Pembacaan layar penuh dan gesekan halaman telah ditambahkan, kompatibilitas WebView lama telah ditingkatkan, dan opsi perangkat keras yang tidak tersedia telah disembunyikan."
+  "update.release103.locales": "Antarmuka tersedia dalam tujuh bahasa. Ubah bahasa melalui Pengaturan.",
+  "update.release103.translation": "Baca terjemahan makna Al-Qur’an di mushaf dengan riwayat Hafs dari Asim.",
+  "update.release103.adhkar": "Antarmuka lebih sederhana dan tampilan zikir lebih ringan dalam mode Hemat.",
+  "update.release103.sync": "Sinkronisasi antara ponsel dan komputer ditingkatkan. Pilih perangkat sumber saat pertama kali menyinkronkan."
 }

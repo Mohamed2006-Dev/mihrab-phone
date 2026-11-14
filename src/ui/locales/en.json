@@ -1653,12 +1653,8 @@
   "feedback.section.ui-ux-simplification": "Simplify & Organize the UI",
   "feedback.prompt.ui-ux-simplification": "Which screen or action needs simplification? How would you suggest presenting it?",
   "update.release103.title": "What’s new from 1.0.2 to 1.0.3?",
-  "update.release103.sync": "Added local sync between phone and computer, with data source selection on first sync and protocol compatibility verification.",
-  "update.release103.reader": "Improved Wird Mushaf display and line justification, with fixes for page clipping in some languages and faster preparation of adjacent pages.",
-  "update.release103.feedback": "Added a categorized report form that prepares details for Google Forms and GitHub.",
-  "update.release103.locales": "Reviewed interface translations, religious terminology, and surah names, and hid the Muhaddith field when absent from the source.",
-  "update.release103.lessons": "Fixed channel name display, lesson numbering, and the layout of batch navigation buttons.",
-  "update.release103.performance": "Reduced visual effects in Economy mode, and improved caching and batching of UI work.",
-  "update.release103.notifications": "Resolved duplicate notification scheduling and improved the display of sync failure messages.",
-  "update.release103.android": "Added fullscreen reading and page swiping, improved older WebView compatibility, and hid unavailable hardware options."
+  "update.release103.locales": "The interface is available in seven languages. Change your language in Settings.",
+  "update.release103.translation": "Read translations of the meanings of the Quran in the Mushaf with the Hafs ’an Asim recitation.",
+  "update.release103.adhkar": "A simpler interface and lighter Adhkar visuals in Economy mode.",
+  "update.release103.sync": "Improved sync between phone and computer, with a choice of which device to sync from first."
 }

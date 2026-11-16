@@ -88,6 +88,16 @@ p { margin: .55rem 0; }
 }
 .storage-guide h3 { color: var(--gold); font-size: 1rem; margin: 0; }
 .storage-guide ol { display: flex; flex-wrap: wrap; gap: .45rem; list-style: none; padding: 0; margin: .6rem 0; }
-.storage-guide li { border: 1px solid var(--line); background: #173c2e; padding: .12rem .6rem; border-radius: .45rem; }
+.storage-guide li { display: inline-flex; align-items: center; gap: .45rem; }
+.storage-guide li + li::before {
+  content: "";
+  width: .35rem;
+  height: .35rem;
+  border: solid var(--gold);
+  border-width: 2px 2px 0 0;
+  transform: rotate(45deg);
+}
+:root[dir="rtl"] .storage-guide li + li::before { transform: rotate(225deg); }
+.storage-guide li > span { border: 1px solid var(--line); background: #173c2e; padding: .12rem .6rem; border-radius: .45rem; }
 .storage-guide p { color: var(--muted); margin-block-end: 0; }
 footer { color: var(--muted); padding-block: 1.4rem 2.4rem; }

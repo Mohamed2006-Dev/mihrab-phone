@@ -14,13 +14,54 @@ body {
   background: radial-gradient(ellipse at 82% 0, #214b3b 0, transparent 40rem);
 }
 .masthead, main { width: min(100% - 2rem, 52rem); margin-inline: auto; }
-.masthead, .brand, nav { display: flex; flex-wrap: wrap; align-items: center; gap: .7rem; }
+.masthead, .brand { display: flex; flex-wrap: wrap; align-items: center; gap: .7rem; }
 .masthead { justify-content: space-between; padding-block: 1.35rem; border-bottom: 1px solid var(--line); }
 .brand { font-weight: 700; }
 .brand img { border-radius: .7rem; }
-nav a { padding: .24rem .75rem; border-radius: 1rem; color: var(--muted); text-decoration: none; }
-nav a[aria-current="page"] { background: var(--gold); color: #16271c; font-weight: 700; }
-nav a:hover:not([aria-current="page"]) { background: #244838; }
+.language-picker { position: relative; }
+.language-picker summary {
+  display: flex;
+  align-items: center;
+  gap: .85rem;
+  min-height: 44px;
+  padding-inline: .8rem;
+  border: 1px solid var(--line);
+  border-radius: .65rem;
+  background: #142f25;
+  color: var(--ink);
+  cursor: pointer;
+  list-style: none;
+}
+.language-picker summary::-webkit-details-marker { display: none; }
+.language-picker summary::after {
+  content: "";
+  width: .38rem;
+  height: .38rem;
+  margin-block-end: .2rem;
+  border: solid var(--gold);
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+.language-picker[open] summary::after { transform: rotate(225deg); margin-block-end: -.2rem; }
+.language-picker summary:focus-visible { outline: 2px solid var(--gold); outline-offset: 4px; }
+.language-picker nav {
+  position: absolute;
+  z-index: 2;
+  inset-block-start: calc(100% + .35rem);
+  inset-inline-end: 0;
+  display: grid;
+  min-width: 11rem;
+  max-height: 60vh;
+  overflow: auto;
+  padding: .3rem;
+  background: #142f25;
+  border: 1px solid var(--line);
+  border-radius: .65rem;
+  box-shadow: 0 .75rem 1.5rem #0005;
+}
+.language-picker a { padding: .4rem .65rem; border-radius: .4rem; color: var(--ink); text-decoration: none; }
+.language-picker a[aria-current="page"] { background: #244838; color: var(--gold); font-weight: 700; }
+.language-picker a:hover { background: #2a5141; }
 a { color: #a4e7c7; text-underline-offset: .18em; overflow-wrap: anywhere; }
 a:focus-visible { outline: 2px solid var(--gold); outline-offset: 4px; }
 .hero { padding-block: clamp(1.8rem, 6vw, 3.5rem) 1.5rem; }
